@@ -1,0 +1,3022 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a73e8">
+<title>Papan Tulis Digital Guru</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; font-family: 'Roboto', 'Segoe UI', system-ui, sans-serif; }
+  body {
+    background: linear-gradient(135deg, #e8f0fe 0%, #f5f7fa 100%);
+    display: flex; flex-direction: column;
+    color: #202124; user-select: none;
+  }
+
+  /* ===== Android Status Bar ===== */
+  .status-bar {
+    background: #1a73e8; color: #fff;
+    padding: 4px 14px; display: flex;
+    justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 500;
+    flex-shrink: 0; z-index: 10;
+  }
+  .status-left { display: flex; gap: 12px; align-items: center; }
+  .status-left .clock { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .status-right { display: flex; gap: 10px; align-items: center; font-size: 12px; opacity: .95; }
+  .battery { display: inline-flex; align-items: center; gap: 3px; }
+  .battery-icon { width: 18px; height: 10px; border: 1.5px solid #fff; border-radius: 2px; position: relative; padding: 1px; }
+  .battery-icon::after { content: ''; position: absolute; right: -3px; top: 2px; width: 2px; height: 4px; background: #fff; border-radius: 0 1px 1px 0; }
+  .battery-level { height: 100%; background: #fff; border-radius: 1px; width: 75%; }
+
+  /* ===== App Header (Mata Pelajaran - improved editable) ===== */
+  .app-header {
+    background: #fff; padding: 6px 12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.08);
+    display: flex; flex-direction: column; gap: 4px;
+    flex-shrink: 0;
+  }
+  .subject-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .subject-label {
+    font-size: 9px; text-transform: uppercase; letter-spacing: .6px;
+    color: #5f6368; font-weight: 700; flex-shrink: 0;
+  }
+  .subject-input {
+    flex: 1; min-width: 0;
+    border: none; border-bottom: 1.5px solid #1a73e8;
+    font-size: 16px; font-weight: 700; color: #1a73e8;
+    padding: 2px 0; outline: none; background: transparent;
+  }
+  .class-input {
+    border: 1px solid #dadce0; border-radius: 6px;
+    padding: 4px 8px; font-size: 12px; background: #f8f9fa;
+    color: #202124; outline: none; width: 110px;
+  }
+  .class-input:focus { border-color: #1a73e8; background: #fff; }
+
+  /* ===== Tab Navigation ===== */
+  .tabs {
+    display: flex; background: #fff;
+    border-bottom: 1px solid #e8eaed; flex-shrink: 0;
+    overflow-x: auto;
+  }
+  .tab {
+    flex: 1; padding: 8px 6px; text-align: center;
+    font-size: 12px; font-weight: 500; color: #5f6368;
+    cursor: pointer; border-bottom: 2px solid transparent;
+    transition: all .2s; white-space: nowrap; min-width: 80px;
+  }
+  .tab.active { color: #1a73e8; border-bottom-color: #1a73e8; }
+  .tab:active { background: #f1f3f4; }
+
+  /* ===== Content Area ===== */
+  .content { flex: 1; overflow: hidden; position: relative; }
+  .panel { position: absolute; inset: 0; display: none; flex-direction: column; }
+  .panel.active { display: flex; }
+
+  /* ===== Whiteboard Panel ===== */
+  .board-toolbar {
+    background: #fff; padding: 4px 8px;
+    display: flex; gap: 4px; align-items: center;
+    border-bottom: 1px solid #e8eaed; flex-wrap: wrap;
+    flex-shrink: 0; min-height: 40px;
+  }
+  .tool-btn {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: none; cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    font-size: 15px; transition: all .15s; background: #f1f3f4;
+  }
+  .tool-btn:active { transform: scale(.92); }
+  .tool-btn.active { background: #1a73e8; color: #fff; }
+  .color-swatch {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 2px solid #fff; box-shadow: 0 0 0 1px #dadce0;
+    cursor: pointer; transition: transform .15s;
+  }
+  .color-swatch.active { box-shadow: 0 0 0 2px #1a73e8; transform: scale(1.15); }
+  .tool-divider { width: 1px; height: 22px; background: #e8eaed; margin: 0 2px; }
+  .size-range { width: 80px; accent-color: #1a73e8; height: 24px; }
+  .clear-btn {
+    background: #ea4335; color: #fff; border: none;
+    padding: 6px 10px; border-radius: 14px; font-size: 11px;
+    font-weight: 600; cursor: pointer; margin-left: auto;
+  }
+  .clear-btn:active { transform: scale(.95); }
+  .fullscreen-btn {
+    background: #34a853; color: #fff; border: none;
+    width: 32px; height: 32px; border-radius: 50%;
+    cursor: pointer; font-size: 15px;
+  }
+
+  .canvas-wrap {
+    flex: 1; background: #fffef7; position: relative;
+    overflow: hidden; touch-action: none; min-height: 0;
+  }
+  #board { display: block; cursor: crosshair; width: 100%; height: 100%; }
+
+  /* Fullscreen mode hides everything except canvas + floating toolbar */
+  body.fs-mode .status-bar,
+  body.fs-mode .app-header,
+  body.fs-mode .tabs,
+  body.fs-mode .bottom-nav { display: none; }
+  body.fs-mode .board-toolbar {
+    position: absolute; top: 8px; left: 8px; right: 8px;
+    z-index: 20; background: rgba(255,255,255,.95); border-radius: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2); padding: 4px 12px;
+    backdrop-filter: blur(8px);
+  }
+  body.fs-mode .canvas-wrap { background: #fffef7; }
+
+  /* Calculator FAB */
+  .calc-fab {
+    position: absolute; bottom: 14px; right: 14px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #1a73e8; color: #fff; border: none;
+    font-size: 22px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(26,115,232,.4); z-index: 5;
+    transition: transform .2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .calc-fab:active { transform: scale(.9); }
+
+  /* ===== Scientific Calculator Overlay ===== */
+  .calc-overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,.5);
+    display: none; flex-direction: column; justify-content: flex-end;
+    z-index: 6;
+  }
+  .calc-overlay.show { display: flex; }
+  .calc-card {
+    background: #fff; border-radius: 16px 16px 0 0;
+    width: 100%; max-width: 540px; margin: 0 auto;
+    box-shadow: 0 -4px 24px rgba(0,0,0,.25);
+    display: flex; flex-direction: column;
+    max-height: 92vh;
+    overflow: hidden;
+  }
+  .calc-header {
+    background: #1a73e8; color: #fff;
+    padding: 8px 14px; display: flex;
+    justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  .calc-title { font-size: 13px; font-weight: 600; }
+  .calc-close {
+    background: rgba(255,255,255,.2); color: #fff;
+    border: none; width: 26px; height: 26px; border-radius: 50%;
+    cursor: pointer; font-size: 16px; line-height: 1;
+  }
+  .calc-display {
+    background: #fff; border-bottom: 1px solid #e8eaed;
+    padding: 10px 14px; min-height: 80px;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    flex-shrink: 0;
+  }
+  .calc-expr {
+    font-size: 13px; color: #5f6368; text-align: right;
+    word-break: break-all; min-height: 18px;
+    font-family: 'Roboto Mono', monospace;
+  }
+  .calc-result {
+    font-size: 28px; font-weight: 700; color: #1a73e8;
+    text-align: right; word-break: break-all; margin-top: 4px;
+    font-family: 'Roboto Mono', monospace;
+    line-height: 1.2;
+  }
+  .calc-result.error { color: #ea4335; font-size: 16px; }
+
+  /* Calculator tabs (utama / abc / fungsi) + angle mode */
+  .calc-tabs {
+    display: flex; background: #f8f9fa;
+    border-bottom: 1px solid #e8eaed; padding: 0 6px;
+    flex-shrink: 0; align-items: center; gap: 4px;
+  }
+  .calc-tab {
+    padding: 8px 12px; font-size: 12px; font-weight: 600;
+    color: #5f6368; cursor: pointer;
+    border-bottom: 2px solid transparent; text-transform: lowercase;
+  }
+  .calc-tab.active { color: #1a73e8; border-bottom-color: #1a73e8; }
+  .calc-angle-toggle {
+    margin-left: auto; display: flex; gap: 4px;
+  }
+  .angle-btn {
+    padding: 4px 10px; font-size: 11px; font-weight: 700;
+    background: #fff; color: #5f6368; border: 1px solid #dadce0;
+    border-radius: 6px; cursor: pointer;
+  }
+  .angle-btn.active { background: #e8f0fe; color: #1a73e8; border-color: #1a73e8; }
+  .calc-action-btns {
+    display: flex; gap: 4px; padding: 4px 6px;
+    background: #f8f9fa; border-bottom: 1px solid #e8eaed;
+    flex-shrink: 0;
+  }
+  .calc-action-btn {
+    background: #fff; border: 1px solid #dadce0;
+    padding: 4px 8px; font-size: 11px; border-radius: 6px;
+    cursor: pointer; color: #5f6368;
+  }
+  .calc-action-btn:active { background: #e8f0fe; }
+  .calc-action-btn.danger { color: #ea4335; }
+
+  /* Calculator keyboard */
+  .calc-keys {
+    background: #f1f3f4; padding: 6px;
+    display: grid; gap: 4px;
+    overflow-y: auto; flex: 1;
+  }
+  .calc-keys.utama { grid-template-columns: repeat(9, 1fr); }
+  .calc-keys.abc { grid-template-columns: repeat(10, 1fr); }
+  .calc-keys.fungsi { grid-template-columns: repeat(6, 1fr); }
+
+  .key {
+    background: #fff; color: #202124; border: none;
+    padding: 10px 4px; border-radius: 8px;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all .1s;
+    text-align: center; min-height: 36px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .key:active { background: #e8f0fe; transform: scale(.95); }
+  .key.op { background: #fef7e0; color: #b06000; }
+  .key.func { background: #e8f0fe; color: #1a73e8; font-size: 12px; }
+  .key.num { background: #fff; }
+  .key.const { background: #fce8e6; color: #c5221f; }
+  .key.equal {
+    background: #1a73e8; color: #fff; font-size: 18px;
+  }
+  .key.equal:active { background: #1557b0; }
+  .key.del { background: #fce8e6; color: #c5221f; }
+  .key.ac { background: #ea4335; color: #fff; }
+  .key.write {
+    background: #34a853; color: #fff; font-size: 12px;
+    grid-column: span 9; padding: 10px;
+  }
+  .key.write.abc { grid-column: span 10; }
+  .key.write.fungsi { grid-column: span 6; }
+
+  /* ===== Assessment Panel ===== */
+  .assessment-wrap {
+    flex: 1; overflow-y: auto; padding: 14px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .student-form {
+    background: #fff; border-radius: 14px; padding: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .form-input {
+    flex: 1; min-width: 120px; border: 1px solid #dadce0;
+    border-radius: 10px; padding: 11px 14px; font-size: 15px;
+    outline: none; background: #fff; color: #202124;
+  }
+  .form-input:focus { border-color: #1a73e8; box-shadow: 0 0 0 2px rgba(26,115,232,.15); }
+  .form-input.score { max-width: 110px; }
+  .add-btn {
+    background: #1a73e8; color: #fff; border: none;
+    padding: 11px 22px; border-radius: 10px; font-size: 14px;
+    font-weight: 600; cursor: pointer;
+  }
+  .add-btn:active { transform: scale(.97); }
+  .stats-bar {
+    background: #fff; border-radius: 12px; padding: 12px 14px;
+    display: flex; justify-content: space-around;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08); font-size: 13px;
+  }
+  .stat-item { text-align: center; }
+  .stat-val { font-size: 18px; font-weight: 700; color: #1a73e8; display: block; }
+  .stat-label { color: #5f6368; font-size: 11px; }
+
+  .student-list-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 4px;
+  }
+  .student-list-header h3 { font-size: 15px; color: #202124; }
+  .export-btn {
+    background: #34a853; color: #fff; border: none;
+    padding: 7px 12px; border-radius: 8px; font-size: 12px;
+    font-weight: 600; cursor: pointer;
+  }
+  .export-btn:active { transform: scale(.95); }
+  .export-btn.pdf { background: #ea4335; }
+
+  .student-list { display: flex; flex-direction: column; gap: 8px; }
+  .student-card {
+    background: #fff; border-radius: 12px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.06);
+    border-left: 4px solid #1a73e8;
+  }
+  .student-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #e8f0fe; color: #1a73e8;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px; flex-shrink: 0;
+  }
+  .student-info { flex: 1; min-width: 0; }
+  .student-name { font-weight: 600; font-size: 14px; color: #202124; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .student-meta { font-size: 11px; color: #5f6368; margin-top: 2px; }
+  .student-score {
+    font-size: 20px; font-weight: 700; color: #34a853;
+    background: #e6f4ea; padding: 4px 12px; border-radius: 8px;
+    min-width: 50px; text-align: center;
+  }
+  .student-score.low { color: #ea4335; background: #fce8e6; }
+  .student-score.mid { color: #f9ab00; background: #fef7e0; }
+  .del-btn {
+    background: transparent; border: none; color: #ea4335;
+    font-size: 18px; cursor: pointer; padding: 4px 8px;
+  }
+  .empty-state {
+    text-align: center; padding: 40px 20px; color: #9aa0a6;
+    font-size: 13px;
+  }
+
+  /* ===== Toast ===== */
+  .toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: #323232; color: #fff; padding: 10px 20px;
+    border-radius: 24px; font-size: 13px; opacity: 0;
+    transition: opacity .3s, transform .3s; z-index: 100;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, -8px); }
+
+  /* ===== Bottom Nav ===== */
+  .bottom-nav {
+    background: #fff; border-top: 1px solid #e8eaed;
+    display: flex; padding: 4px 0; flex-shrink: 0;
+  }
+  .nav-btn {
+    flex: 1; background: none; border: none;
+    padding: 6px 4px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 2px; color: #5f6368; font-size: 10px; font-weight: 500;
+  }
+  .nav-btn.active { color: #1a73e8; }
+  .nav-icon { font-size: 18px; }
+
+  @media (min-width: 768px) {
+    .app-header, .tabs, .board-toolbar, .bottom-nav { max-width: 1200px; margin: 0 auto; width: 100%; }
+    .canvas-wrap, .assessment-wrap { max-width: 1200px; margin: 0 auto; width: 100%; }
+    .status-bar { font-size: 13px; }
+    body { background: #d2e3fc; }
+    .content { background: #d2e3fc; }
+    .content::before { display: none; }
+    .canvas-wrap { box-shadow: inset 0 0 0 1px #e8eaed; }
+  }
+  @media (min-width: 1200px) {
+    .app-header, .tabs, .board-toolbar, .bottom-nav { max-width: 1400px; }
+    .canvas-wrap, .assessment-wrap { max-width: 1400px; }
+  }
+  @media (max-height: 500px) and (orientation: landscape) {
+    .app-header { padding: 3px 10px; gap: 2px; }
+    .subject-input { font-size: 14px; }
+    .class-input { width: 90px; padding: 3px 6px; }
+    .tab { padding: 4px 6px; font-size: 11px; }
+    .tool-btn { width: 28px; height: 28px; font-size: 13px; }
+    .color-swatch { width: 20px; height: 20px; }
+    .bottom-nav { padding: 2px 0; }
+    .nav-btn { padding: 3px 4px; }
+    .nav-icon { font-size: 15px; }
+  }
+
+  /* ===== Exam Editor ===== */
+  .question-card {
+    background: #fff; border-radius: 10px; padding: 12px;
+    border: 1px solid #e8eaed; border-left: 4px solid #1a73e8;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .question-card.essay { border-left-color: #34a853; }
+  .question-head {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 8px;
+  }
+  .question-num {
+    background: #1a73e8; color: #fff; padding: 3px 10px;
+    border-radius: 12px; font-size: 11px; font-weight: 700;
+  }
+  .question-card.essay .question-num { background: #34a853; }
+  .question-type {
+    font-size: 10px; color: #5f6368; text-transform: uppercase;
+    letter-spacing: .5px; font-weight: 600;
+  }
+  .q-del-btn {
+    background: #fce8e6; color: #ea4335; border: none;
+    width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+    font-size: 14px; line-height: 1;
+  }
+  .q-text {
+    width: 100%; border: 1px solid #dadce0; border-radius: 8px;
+    padding: 10px; font-size: 14px; outline: none;
+    font-family: inherit; resize: vertical; min-height: 60px;
+  }
+  .q-text:focus { border-color: #1a73e8; }
+  .q-options { display: flex; flex-direction: column; gap: 6px; }
+  .q-option {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .q-option-radio {
+    width: 20px; height: 20px; flex-shrink: 0;
+    accent-color: #1a73e8; cursor: pointer;
+  }
+  .q-option-input {
+    flex: 1; border: 1px solid #dadce0; border-radius: 6px;
+    padding: 6px 10px; font-size: 13px; outline: none;
+  }
+  .q-option-input:focus { border-color: #1a73e8; }
+  .q-option-del {
+    background: transparent; border: none; color: #ea4335;
+    cursor: pointer; font-size: 16px; padding: 4px 6px;
+  }
+  .q-add-option {
+    background: #e8f0fe; color: #1a73e8; border: 1px dashed #1a73e8;
+    padding: 4px 10px; border-radius: 6px; font-size: 11px;
+    cursor: pointer; align-self: flex-start;
+  }
+  .q-points {
+    display: flex; align-items: center; gap: 6px; font-size: 12px;
+    color: #5f6368;
+  }
+  .q-points input {
+    width: 50px; border: 1px solid #dadce0; border-radius: 6px;
+    padding: 4px 6px; font-size: 12px; outline: none;
+  }
+
+  /* Image upload area */
+  .q-image-area { margin-top: 4px; }
+  .q-img-btn {
+    background: #f1f3f4; color: #5f6368; border: 1px dashed #dadce0;
+    padding: 6px 12px; border-radius: 8px; font-size: 12px;
+    font-weight: 600; cursor: pointer; transition: all .15s;
+  }
+  .q-img-btn.add {
+    background: #e8f0fe; color: #1a73e8; border-color: #1a73e8;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .q-img-btn.add:hover { background: #d2e3fc; }
+  .q-img-btn.del { background: #fce8e6; color: #c5221f; border-color: #ea4335; }
+  .q-img-btn:active { transform: scale(.97); }
+  .q-image-preview {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: #f8f9fa; padding: 8px; border-radius: 8px;
+    border: 1px solid #e8eaed;
+  }
+  .q-image-img {
+    max-width: 180px; max-height: 140px; border-radius: 6px;
+    border: 1px solid #dadce0; cursor: pointer;
+    object-fit: contain;
+  }
+  .q-image-actions {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .hidden { display: none !important; }
+
+  /* Saved exam cards */
+  .exam-card {
+    background: #fff; border-radius: 10px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.06);
+    border-left: 4px solid #1a73e8;
+  }
+  .exam-info { flex: 1; min-width: 0; }
+  .exam-title { font-weight: 600; font-size: 14px; color: #202124;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .exam-meta { font-size: 11px; color: #5f6368; margin-top: 2px; }
+  .exam-action {
+    background: #1a73e8; color: #fff; border: none;
+    padding: 6px 10px; border-radius: 6px; font-size: 11px;
+    font-weight: 600; cursor: pointer;
+  }
+  .exam-action.share { background: #34a853; }
+  .exam-action.del { background: #ea4335; }
+
+  /* Submitted answer cards */
+  .answer-card {
+    background: #fff; border-radius: 10px; padding: 12px 14px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.06);
+    border-left: 4px solid #34a853;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .answer-head {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 8px;
+  }
+  .answer-name { font-weight: 600; font-size: 14px; }
+  .answer-date { font-size: 11px; color: #5f6368; }
+  .answer-score {
+    background: #1a73e8; color: #fff; padding: 4px 10px;
+    border-radius: 12px; font-size: 12px; font-weight: 700;
+  }
+  .answer-exam { font-size: 11px; color: #5f6368; }
+  .answer-actions { display: flex; gap: 6px; }
+  .answer-actions button {
+    border: none; padding: 4px 10px; border-radius: 6px;
+    font-size: 11px; cursor: pointer; color: #fff;
+  }
+
+  /* Tugas siswa cards */
+  .tugas-card {
+    background: #fff; border-radius: 10px; padding: 12px 14px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.06);
+    border-left: 4px solid #1a73e8;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .tugas-card.graded { border-left-color: #34a853; }
+  .tugas-title { font-weight: 600; font-size: 14px; color: #202124; }
+  .tugas-meta { font-size: 11px; color: #5f6368; }
+  .tugas-answer { font-size: 12px; color: #202124; background: #f8f9fa; padding: 8px; border-radius: 6px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; }
+  .tugas-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tugas-actions button {
+    border: none; padding: 6px 10px; border-radius: 6px;
+    font-size: 11px; cursor: pointer; color: #fff; font-weight: 600;
+  }
+  .tugas-actions button.view { background: #1a73e8; }
+  .tugas-actions button.download { background: #34a853; }
+  .tugas-actions button.grade { background: #f9ab00; }
+  .tugas-actions button.del { background: #ea4335; }
+  .tugas-badge {
+    display: inline-block; padding: 3px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+  }
+  .tugas-badge.pending { background: #fef7e0; color: #b06000; }
+  .tugas-badge.graded { background: #e6f4ea; color: #16a34a; }
+
+</style>
+</head>
+<body>
+
+<!-- ===== Status Bar (Android) ===== -->
+<div class="status-bar">
+  <div class="status-left">
+    <span class="clock" id="clock">00:00</span>
+    <span id="dayName">Hari</span>
+  </div>
+  <div class="status-right">
+    <span id="fullDate">Tanggal</span>
+    <span class="battery">
+      <span class="battery-icon"><span class="battery-level" id="batteryLevel"></span></span>
+      <span id="batteryPct">75%</span>
+    </span>
+  </div>
+</div>
+
+<!-- ===== App Header (Mata Pelajaran di paling atas) ===== -->
+<div class="app-header">
+  <div class="subject-row">
+    <span class="subject-label">Mapel</span>
+    <input type="text" class="subject-input" id="subjectInput" placeholder="Ketik mata pelajaran..." value="Matematika">
+  </div>
+  <div class="subject-row">
+    <input type="text" class="class-input" id="classInput" placeholder="Kelas" value="Kelas VI-A">
+    <input type="text" class="class-input" id="teacherInput" placeholder="Nama Guru" value="">
+    <input type="text" class="class-input" id="topicInput" placeholder="Topik / Bab" value="">
+  </div>
+</div>
+
+<!-- ===== Tabs ===== -->
+<div class="tabs">
+  <div class="tab active" data-tab="board">Papan Tulis</div>
+  <div class="tab" data-tab="assess">Penilaian Siswa</div>
+  <div class="tab" data-tab="raport">Raport / Ujian</div>
+  <div class="tab" data-tab="exam">Bagikan Ujian</div>
+</div>
+
+<!-- ===== Content ===== -->
+<div class="content">
+
+  <!-- Panel 1: Papan Tulis -->
+  <div class="panel active" id="panel-board">
+    <div class="board-toolbar">
+      <button class="tool-btn active" id="penTool" title="Pulpen">✏️</button>
+      <button class="tool-btn" id="eraserTool" title="Penghapus">🧽</button>
+      <div class="tool-divider"></div>
+      <div class="color-swatch active" style="background:#1a73e8" data-color="#1a73e8"></div>
+      <div class="color-swatch" style="background:#ea4335" data-color="#ea4335"></div>
+      <div class="color-swatch" style="background:#34a853" data-color="#34a853"></div>
+      <div class="color-swatch" style="background:#f9ab00" data-color="#f9ab00"></div>
+      <div class="color-swatch" style="background:#202124" data-color="#202124"></div>
+      <div class="tool-divider"></div>
+      <input type="range" class="size-range" id="sizeRange" min="2" max="20" value="4">
+      <div class="tool-divider"></div>
+      <button class="tool-btn" id="undoBtn" title="Batal">↩️</button>
+      <button class="clear-btn" id="clearBtn">Hapus</button>
+      <button class="fullscreen-btn" id="fullscreenBtn" title="Layar Penuh">⛶</button>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="board"></canvas>
+      <button class="calc-fab" id="calcFab" title="Buka Kalkulator">🧮</button>
+
+      <!-- Scientific Calculator Overlay -->
+      <div class="calc-overlay" id="calcOverlay">
+        <div class="calc-card">
+          <div class="calc-header">
+            <span class="calc-title">Kalkulator Ilmiah</span>
+            <button class="calc-close" id="calcClose">✕</button>
+          </div>
+          <div class="calc-display">
+            <div class="calc-expr" id="calcExpr">0</div>
+            <div class="calc-result" id="calcResult">0</div>
+          </div>
+          <div class="calc-tabs">
+            <div class="calc-tab active" data-ctab="utama">utama</div>
+            <div class="calc-tab" data-ctab="abc">abc</div>
+            <div class="calc-tab" data-ctab="fungsi">fgsi</div>
+            <div class="calc-angle-toggle">
+              <button class="angle-btn active" id="radBtn">RAD</button>
+              <button class="angle-btn" id="drjtBtn">DRJT</button>
+            </div>
+          </div>
+          <div class="calc-action-btns">
+            <button class="calc-action-btn" id="calcUndo">↶ undo</button>
+            <button class="calc-action-btn" id="calcRedo">↷ redo</button>
+            <button class="calc-action-btn danger" id="calcAC">hapus semua</button>
+            <button class="calc-action-btn" id="copyBtn">⧉ salin</button>
+          </div>
+
+          <!-- Tab utama -->
+          <div class="calc-keys utama active" data-pane="utama">
+            <button class="key func" data-ins="^2" data-label="²">x²</button>
+            <button class="key func" data-ins="^3" data-label="³">x³</button>
+            <button class="key func" data-ins="abs(" data-label="|x|">|x|</button>
+            <button class="key num" data-ins="7">7</button>
+            <button class="key num" data-ins="8">8</button>
+            <button class="key num" data-ins="9">9</button>
+            <button class="key op" data-ins="/">÷</button>
+            <button class="key op" data-ins="%">%</button>
+            <button class="key func" data-ins="frac(" data-label="a/b">a/b</button>
+
+            <button class="key func" data-ins="sqrt(" data-label="√">√</button>
+            <button class="key func" data-ins="cbrt(" data-label="∛">∛</button>
+            <button class="key const" data-ins="pi" data-label="π">π</button>
+            <button class="key num" data-ins="4">4</button>
+            <button class="key num" data-ins="5">5</button>
+            <button class="key num" data-ins="6">6</button>
+            <button class="key op" data-ins="*">×</button>
+            <button class="key func" data-ins="(">(</button>
+            <button class="key func" data-ins=")">)</button>
+
+            <button class="key func" data-ins="sin(">sin</button>
+            <button class="key func" data-ins="cos(">cos</button>
+            <button class="key func" data-ins="tan(">tan</button>
+            <button class="key num" data-ins="1">1</button>
+            <button class="key num" data-ins="2">2</button>
+            <button class="key num" data-ins="3">3</button>
+            <button class="key op" data-ins="-">−</button>
+            <button class="key num" data-ins="ans" data-label="ans">ans</button>
+            <button class="key del" id="calcBack">⌫</button>
+
+            <button class="key func" data-ins=".">.</button>
+            <button class="key num" data-ins="0">0</button>
+            <button class="key func" data-ins=",">,</button>
+            <button class="key op" data-ins="+">+</button>
+            <button class="key equal" id="calcEquals" style="grid-column: span 4">↵</button>
+
+            <button class="key write" id="calcWrite">✍️ Tulis Hasil ke Papan Tulis</button>
+          </div>
+
+          <!-- Tab abc -->
+          <div class="calc-keys abc" data-pane="abc" style="display:none">
+            <button class="key" data-ins="q">q</button><button class="key" data-ins="w">w</button>
+            <button class="key" data-ins="e">e</button><button class="key" data-ins="r">r</button>
+            <button class="key" data-ins="t">t</button><button class="key" data-ins="y">y</button>
+            <button class="key" data-ins="u">u</button><button class="key" data-ins="i">i</button>
+            <button class="key" data-ins="o">o</button><button class="key" data-ins="p">p</button>
+
+            <button class="key" data-ins="a">a</button><button class="key" data-ins="s">s</button>
+            <button class="key" data-ins="d">d</button><button class="key" data-ins="f">f</button>
+            <button class="key" data-ins="g">g</button><button class="key" data-ins="h">h</button>
+            <button class="key" data-ins="j">j</button><button class="key" data-ins="k">k</button>
+            <button class="key" data-ins="l">l</button>
+
+            <button class="key op" data-ins="=">=</button>
+            <button class="key" data-ins="z">z</button><button class="key" data-ins="x">x</button>
+            <button class="key" data-ins="c">c</button><button class="key" data-ins="v">v</button>
+            <button class="key" data-ins="b">b</button><button class="key" data-ins="n">n</button>
+            <button class="key" data-ins="m">m</button>
+            <button class="key op" data-ins=",">,</button>
+            <button class="key del" id="calcBack2">⌫</button>
+
+            <button class="key func" data-ins="^">^</button>
+            <button class="key func" data-ins="(">(</button>
+            <button class="key func" data-ins=")">)</button>
+            <button class="key func" data-ins="[">[</button>
+            <button class="key func" data-ins="]">]</button>
+            <button class="key func" data-ins="!">!</button>
+            <button class="key func" data-ins="'">'</button>
+            <button class="key const" data-ins="pi" data-label="π">π</button>
+            <button class="key equal" id="calcEquals2">↵</button>
+
+            <button class="key write abc" id="calcWrite2">✍️ Tulis ke Papan Tulis</button>
+          </div>
+
+          <!-- Tab fungsi -->
+          <div class="calc-keys fungsi" data-pane="fungsi" style="display:none">
+            <button class="key func" data-ins="sin(">sin</button>
+            <button class="key func" data-ins="cos(">cos</button>
+            <button class="key func" data-ins="tan(">tan</button>
+            <button class="key func" data-ins="^" data-label="a^b">a^b</button>
+            <button class="key func" data-ins="sqrt(" data-label="√">√</button>
+            <button class="key func" data-ins="cbrt(" data-label="∛">∛</button>
+
+            <button class="key func" data-ins="asin(">sin⁻¹</button>
+            <button class="key func" data-ins="acos(">cos⁻¹</button>
+            <button class="key func" data-ins="atan(">tan⁻¹</button>
+            <button class="key func" data-ins="e^(">e^x</button>
+            <button class="key func" data-ins="abs(">abs</button>
+            <button class="key func" data-ins="round(">round</button>
+
+            <button class="key func" data-ins="mean(">mean</button>
+            <button class="key func" data-ins="stdev(">stdev</button>
+            <button class="key func" data-ins="stdevp(">stdevp</button>
+            <button class="key func" data-ins="ln(">ln</button>
+            <button class="key func" data-ins="log(">log</button>
+            <button class="key del" id="calcBack3">⌫</button>
+
+            <button class="key func" data-ins="nPr(">nPr</button>
+            <button class="key func" data-ins="nCr(">nCr</button>
+            <button class="key func" data-ins="!">!</button>
+            <button class="key const" data-ins="e" data-label="e">e</button>
+            <button class="key const" data-ins="pi" data-label="π">π</button>
+            <button class="key equal" id="calcEquals3">↵</button>
+
+            <button class="key write fungsi" id="calcWrite3">✍️ Tulis Hasil ke Papan Tulis</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel 2: Penilaian -->
+  <div class="panel" id="panel-assess">
+    <div class="assessment-wrap">
+      <div class="student-form">
+        <div class="form-row">
+          <input type="text" class="form-input" id="studentName" placeholder="Nama Siswa">
+          <input type="text" class="form-input" id="studentNis" placeholder="NIS (opsional)">
+        </div>
+        <div class="form-row">
+          <input type="text" class="form-input" id="assignmentName" placeholder="Nama Tugas/Ujian (cth: UTS Matematika)">
+          <input type="number" class="form-input score" id="studentScore" placeholder="Nilai" min="0" max="100">
+          <button class="add-btn" id="addStudent">+ Tambah</button>
+        </div>
+      </div>
+      <div class="stats-bar">
+        <div class="stat-item"><span class="stat-val" id="statTotal">0</span><span class="stat-label">Siswa</span></div>
+        <div class="stat-item"><span class="stat-val" id="statAvg">0</span><span class="stat-label">Rata-rata</span></div>
+        <div class="stat-item"><span class="stat-val" id="statHigh">0</span><span class="stat-label">Tertinggi</span></div>
+        <div class="stat-item"><span class="stat-val" id="statLow">0</span><span class="stat-label">Terendah</span></div>
+      </div>
+      <div class="student-list-header">
+        <h3>Daftar Nilai</h3>
+        <button class="export-btn" id="exportCSV">⬇ CSV</button>
+      </div>
+      <div class="student-list" id="studentList">
+        <div class="empty-state">Belum ada nilai.<br>Tambahkan siswa pertama di atas.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel 3: Raport -->
+  <div class="panel" id="panel-raport">
+    <div class="assessment-wrap">
+      <div class="student-form">
+        <h3 style="font-size:15px;color:#202124">📋 Laporan Penilaian - Raport / Ujian Sekolah</h3>
+        <div class="form-row">
+          <input type="text" class="form-input" id="reportSchool" placeholder="Nama Sekolah" value="SD Negeri 1">
+          <input type="text" class="form-input" id="reportSemester" placeholder="Semester" value="Ganjil 2025/2026">
+        </div>
+
+        <!-- ===== Penelusuran Siswa ===== -->
+        <div style="background:#f8f9fa;border-radius:10px;padding:10px;margin-top:4px;border:1px solid #e8eaed">
+          <div style="font-size:12px;font-weight:700;color:#1a73e8;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">🔍 Penelusuran Siswa</div>
+          <div class="form-row">
+            <input type="text" class="form-input" id="searchStudent" placeholder="Ketik nama siswa atau NIS..." style="flex:1;min-width:180px">
+            <select class="form-input" id="studentSelect" style="max-width:200px;cursor:pointer">
+              <option value="">-- Pilih Siswa --</option>
+            </select>
+          </div>
+          <div style="font-size:11px;color:#5f6368;margin-top:4px">
+            💡 Pilih nama siswa dari daftar untuk menampilkan raport per-siswa. Daftar diambil otomatis dari data Penilaian Siswa.
+          </div>
+        </div>
+
+        <!-- ===== Mode Tampilan ===== -->
+        <div class="form-row" style="margin-top:6px">
+          <button class="export-btn" id="modeKelas" style="flex:1">📊 Raport Kelas</button>
+          <button class="export-btn" id="modeSiswa" style="flex:1;background:#1a73e8">👤 Raport Siswa</button>
+        </div>
+
+        <div class="form-row" style="margin-top:6px">
+          <button class="export-btn pdf" id="printPDF">🖨️ Cetak PDF</button>
+          <button class="export-btn" id="exportJSON">⬇ Backup</button>
+          <button class="export-btn" id="importJSON" style="background:#f9ab00">⬆ Impor Backup</button>
+        </div>
+      </div>
+      <div id="reportPreview" style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);min-height:300px">
+        <div class="empty-state" id="reportEmpty">Belum ada data nilai.<br>Tambahkan data di tab Penilaian terlebih dahulu.</div>
+        <div id="reportContent" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel 4: Bagikan Ujian -->
+  <div class="panel" id="panel-exam">
+    <div class="assessment-wrap">
+      <div class="student-form">
+        <h3 style="font-size:15px;color:#202124">📝 Bagikan Lembar Ujian / Ulangan Harian</h3>
+        <div style="font-size:12px;color:#5f6368;margin-bottom:8px">
+          Buat soal pilihan ganda & essay → bagikan link ke siswa → siswa kerjakan di HP mereka → jawaban otomatis tersimpan.
+        </div>
+        <div class="form-row">
+          <input type="text" class="form-input" id="examTitle" placeholder="Judul Ujian (cth: Ulangan Harian Matematika Bab 3)" value="">
+          <select class="form-input" id="examType" style="max-width:180px">
+            <option value="ulangan">Ulangan Harian</option>
+            <option value="uts">Ujian Tengah Semester (UTS)</option>
+            <option value="uas">Ujian Akhir Semester (UAS)</option>
+            <option value="ujian-sekolah">Ujian Sekolah</option>
+            <option value="kuis">Kuis</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <input type="number" class="form-input" id="examDuration" placeholder="Durasi (menit)" value="60" min="1" max="300" style="max-width:140px">
+          <input type="text" class="form-input" id="examSubject" placeholder="Mata Pelajaran" value="">
+          <input type="text" class="form-input" id="examClass" placeholder="Kelas" value="">
+        </div>
+      </div>
+
+      <!-- Editor Soal -->
+      <div class="student-form">
+        <div class="student-list-header">
+          <h3>📋 Daftar Soal</h3>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="export-btn" id="addMcQuestion" style="background:#1a73e8">+ Pilihan Ganda</button>
+            <button class="export-btn" id="addEssayQuestion" style="background:#34a853">+ Essay</button>
+          </div>
+        </div>
+        <div id="examQuestions" style="display:flex;flex-direction:column;gap:12px;margin-top:10px">
+          <div class="empty-state">Belum ada soal.<br>Klik "+ Pilihan Ganda" atau "+ Essay" untuk menambah soal.</div>
+        </div>
+      </div>
+
+      <!-- Share Buttons -->
+      <div class="student-form">
+        <h3 style="font-size:15px;color:#202124">📤 Bagikan ke Siswa</h3>
+        <div class="form-row" style="margin-top:6px">
+          <button class="export-btn" id="genShareLink" style="flex:1;background:#1a73e8">🔗 Buat Link Share</button>
+          <button class="export-btn pdf" id="exportExamHTML">⬇ Export HTML Standalone</button>
+        </div>
+        <div class="form-row" style="margin-top:6px">
+          <button class="export-btn" id="copyShareLink" style="flex:1;background:#34a853">⧉ Salin Link</button>
+          <button class="export-btn" id="openShareLink" style="background:#f9ab00">🌐 Buka di Tab Baru</button>
+          <button class="export-btn" id="shareWhatsApp" style="background:#25d366">💬 WhatsApp</button>
+        </div>
+        <div id="shareLinkBox" style="display:none;margin-top:10px;background:#e8f0fe;border-radius:10px;padding:12px">
+          <div style="font-size:11px;font-weight:700;color:#1a73e8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Link Ujian (kirim ke siswa):</div>
+          <textarea id="shareLinkText" readonly style="width:100%;min-height:60px;font-size:11px;font-family:monospace;border:1px solid #1a73e8;border-radius:6px;padding:8px;background:#fff;color:#202124;resize:vertical"></textarea>
+          <div style="font-size:11px;color:#5f6368;margin-top:6px">
+            💡 Link berisi semua soal di-encode dalam URL. Siswa buka link → kerjakan → jawaban dikirim ke Guru via WhatsApp / email / dicetak. Tidak perlu server.
+          </div>
+        </div>
+      </div>
+
+      <!-- Saved Exams -->
+      <div class="student-form">
+        <div class="student-list-header">
+          <h3>📚 Ujian Tersimpan</h3>
+          <button class="export-btn" id="newExamBtn" style="background:#1a73e8">+ Ujian Baru</button>
+        </div>
+        <div id="savedExamsList" style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+          <div class="empty-state">Belum ada ujian tersimpan.<br>Klik "Buat Link Share" untuk menyimpan ujian ini.</div>
+        </div>
+      </div>
+
+      <!-- Submitted Answers -->
+      <div class="student-form">
+        <div class="student-list-header">
+          <h3>📥 Jawaban Siswa Masuk</h3>
+          <button class="export-btn" id="exportAnswersBtn" style="background:#34a853">⬇ Export Jawaban</button>
+        </div>
+        <div id="submittedAnswers" style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+          <div class="empty-state">Belum ada jawaban masuk.<br>Siswa bisa kirim jawaban via link shareable.</div>
+        </div>
+      </div>
+
+      <!-- Penerima Tugas / Latihan dari Siswa -->
+      <div class="student-form">
+        <div class="student-list-header">
+          <h3>📚 Tugas & Latihan dari Siswa</h3>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="export-btn" id="refreshTugasGuruBtn" style="background:#1a73e8">🔄 Refresh</button>
+            <button class="export-btn" id="exportTugasGuruBtn" style="background:#34a853">⬇ Export</button>
+          </div>
+        </div>
+        <div style="font-size:12px;color:#5f6368;margin-top:6px">
+          💡 Tugas yang siswa kumpulkan lewat portal siswa akan muncul otomatis di sini (jika di perangkat yang sama). Bisa juga impor file tugas dari portal siswa.
+        </div>
+        <div class="form-row" style="margin-top:8px">
+          <button class="export-btn" id="importTugasGuruBtn" style="background:#f9ab00">⬆ Impor Tugas</button>
+        </div>
+        <div id="tugasGuruList" style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+          <div class="empty-state">Belum ada tugas masuk.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Bottom Nav ===== -->
+<div class="bottom-nav">
+  <button class="nav-btn active" data-tab="board"><span class="nav-icon">📋</span>Papan</button>
+  <button class="nav-btn" data-tab="assess"><span class="nav-icon">🎓</span>Nilai</button>
+  <button class="nav-btn" data-tab="raport"><span class="nav-icon">📄</span>Raport</button>
+  <button class="nav-btn" data-tab="exam"><span class="nav-icon">📤</span>Ujian</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ========================================================
+   PAPAN TULIS DIGITAL GURU - JavaScript
+   ======================================================== */
+
+const HARI_ID = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const BULAN_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+/* ===== Status Bar: Clock & Date ===== */
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('clock').textContent = `${h}:${m}`;
+  document.getElementById('dayName').textContent = HARI_ID[now.getDay()];
+  document.getElementById('fullDate').textContent =
+    `${now.getDate()} ${BULAN_ID[now.getMonth()]} ${now.getFullYear()}`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+/* ===== Battery ===== */
+if (navigator.getBattery) {
+  navigator.getBattery().then(b => {
+    const update = () => {
+      const pct = Math.round(b.level * 100);
+      document.getElementById('batteryLevel').style.width = pct + '%';
+      document.getElementById('batteryPct').textContent = pct + '%';
+    };
+    update();
+    b.addEventListener('levelchange', update);
+  });
+} else {
+  document.getElementById('batteryPct').textContent = '75%';
+  document.getElementById('batteryLevel').style.width = '75%';
+}
+
+/* ===== Save subject/class info ===== */
+['subjectInput','classInput','teacherInput','topicInput','reportSchool','reportSemester'].forEach(id => {
+  const el = document.getElementById(id);
+  const saved = localStorage.getItem('ptg_'+id);
+  if (saved !== null) el.value = saved;
+  el.addEventListener('input', () => localStorage.setItem('ptg_'+id, el.value));
+});
+
+/* ===== Tab Navigation ===== */
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.nav-btn').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-'+name));
+  if (name === 'raport') renderReport();
+  if (name === 'assess') renderStudents();
+  if (name === 'exam') { renderExamQuestions(); renderSavedExams(); renderSubmittedAnswers(); renderTugasGuru(); }
+}
+document.querySelectorAll('.tab, .nav-btn').forEach(el => {
+  el.addEventListener('click', () => switchTab(el.dataset.tab));
+});
+
+/* ===== Canvas Drawing ===== */
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+let drawing = false, lastX = 0, lastY = 0;
+let currentTool = 'pen';
+let currentColor = '#1a73e8';
+let currentSize = 4;
+let undoStack = [];
+
+function resizeCanvas() {
+  const wrap = canvas.parentElement;
+  const ratio = window.devicePixelRatio || 1;
+  const w = wrap.clientWidth;
+  const h = wrap.clientHeight;
+  if (w === 0 || h === 0) return;
+  let snapshot = null;
+  if (canvas.width && canvas.height) {
+    snapshot = document.createElement('canvas');
+    snapshot.width = canvas.width;
+    snapshot.height = canvas.height;
+    snapshot.getContext('2d').drawImage(canvas, 0, 0);
+  }
+  canvas.width = w * ratio;
+  canvas.height = h * ratio;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(ratio, ratio);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (snapshot) ctx.drawImage(snapshot, 0, 0, w, h);
+}
+window.addEventListener('resize', resizeCanvas);
+setTimeout(resizeCanvas, 100);
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+}
+function startDraw(e) {
+  e.preventDefault();
+  drawing = true;
+  const p = getPos(e);
+  lastX = p.x; lastY = p.y;
+  saveState();
+}
+function draw(e) {
+  if (!drawing) return;
+  e.preventDefault();
+  const p = getPos(e);
+  ctx.beginPath();
+  ctx.moveTo(lastX, lastY);
+  ctx.lineTo(p.x, p.y);
+  ctx.strokeStyle = currentTool === 'eraser' ? '#fffef7' : currentColor;
+  ctx.lineWidth = currentTool === 'eraser' ? currentSize * 4 : currentSize;
+  ctx.stroke();
+  lastX = p.x; lastY = p.y;
+}
+function stopDraw() { drawing = false; }
+
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', stopDraw);
+canvas.addEventListener('mouseleave', stopDraw);
+canvas.addEventListener('touchstart', startDraw, {passive:false});
+canvas.addEventListener('touchmove', draw, {passive:false});
+canvas.addEventListener('touchend', stopDraw);
+
+function saveState() {
+  if (undoStack.length >= 20) undoStack.shift();
+  undoStack.push(canvas.toDataURL());
+}
+
+document.getElementById('penTool').onclick = () => {
+  currentTool = 'pen';
+  document.getElementById('penTool').classList.add('active');
+  document.getElementById('eraserTool').classList.remove('active');
+};
+document.getElementById('eraserTool').onclick = () => {
+  currentTool = 'eraser';
+  document.getElementById('eraserTool').classList.add('active');
+  document.getElementById('penTool').classList.remove('active');
+};
+document.querySelectorAll('.color-swatch').forEach(s => {
+  s.onclick = () => {
+    document.querySelectorAll('.color-swatch').forEach(x => x.classList.remove('active'));
+    s.classList.add('active');
+    currentColor = s.dataset.color;
+    currentTool = 'pen';
+    document.getElementById('penTool').classList.add('active');
+    document.getElementById('eraserTool').classList.remove('active');
+  };
+});
+document.getElementById('sizeRange').oninput = e => currentSize = +e.target.value;
+document.getElementById('clearBtn').onclick = () => {
+  if (confirm('Hapus semua tulisan di papan?')) {
+    saveState();
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    showToast('Papan dibersihkan');
+  }
+};
+document.getElementById('undoBtn').onclick = () => {
+  if (undoStack.length === 0) return;
+  const img = new Image();
+  img.onload = () => ctx.drawImage(img, 0, 0, canvas.width/(window.devicePixelRatio||1), canvas.height/(window.devicePixelRatio||1));
+  img.src = undoStack.pop();
+};
+
+/* ===== Fullscreen Mode ===== */
+let fsMode = false;
+document.getElementById('fullscreenBtn').onclick = () => {
+  fsMode = !fsMode;
+  document.body.classList.toggle('fs-mode', fsMode);
+  document.getElementById('fullscreenBtn').textContent = fsMode ? '⤡' : '⛶';
+  setTimeout(() => {
+    resizeCanvas();
+    showToast(fsMode ? 'Mode layar penuh aktif' : 'Kembali ke mode normal');
+  }, 100);
+};
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && fsMode) document.getElementById('fullscreenBtn').click();
+});
+
+/* ========================================================
+   SCIENTIFIC CALCULATOR
+   ======================================================== */
+
+const calcOverlay = document.getElementById('calcOverlay');
+const calcExprEl = document.getElementById('calcExpr');
+const calcResultEl = document.getElementById('calcResult');
+
+let calcExpr = '';
+let calcLastAns = 0;
+let angleMode = 'RAD';
+let calcUndoStack = [];
+let calcRedoStack = [];
+
+/* Open / close */
+document.getElementById('calcFab').onclick = () => {
+  calcOverlay.classList.add('show');
+};
+document.getElementById('calcClose').onclick = () => calcOverlay.classList.remove('show');
+calcOverlay.addEventListener('click', e => {
+  if (e.target === calcOverlay) calcOverlay.classList.remove('show');
+});
+
+/* Tab switching */
+document.querySelectorAll('.calc-tab').forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll('.calc-tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    const pane = t.dataset.ctab;
+    document.querySelectorAll('[data-pane]').forEach(p => p.style.display = p.dataset.pane === pane ? 'grid' : 'none');
+  };
+});
+
+/* Angle mode toggle */
+document.getElementById('radBtn').onclick = () => {
+  angleMode = 'RAD';
+  document.getElementById('radBtn').classList.add('active');
+  document.getElementById('drjtBtn').classList.remove('active');
+};
+document.getElementById('drjtBtn').onclick = () => {
+  angleMode = 'DRJT';
+  document.getElementById('drjtBtn').classList.add('active');
+  document.getElementById('radBtn').classList.remove('active');
+};
+
+/* Insert token into expression */
+function pushUndo() {
+  calcUndoStack.push(calcExpr);
+  if (calcUndoStack.length > 50) calcUndoStack.shift();
+  calcRedoStack = [];
+}
+function insertExpr(token, label) {
+  pushUndo();
+  calcExpr += token;
+  updateCalcDisplay();
+}
+function backspaceExpr() {
+  pushUndo();
+  // Remove one logical token (try to remove function names fully)
+  const funcs = ['asin(','acos(','atan(','sqrt(','cbrt(','sin(','cos(','tan(','log(','ln(','abs(','round(','mean(','stdev(','stdevp(','nPr(','nCr(','e^(','frac(','pi','ans'];
+  for (const f of funcs) {
+    if (calcExpr.endsWith(f)) {
+      calcExpr = calcExpr.slice(0, -f.length);
+      updateCalcDisplay();
+      return;
+    }
+  }
+  calcExpr = calcExpr.slice(0, -1);
+  updateCalcDisplay();
+}
+function clearExpr() {
+  pushUndo();
+  calcExpr = '';
+  updateCalcDisplay();
+}
+
+document.getElementById('calcBack').onclick = backspaceExpr;
+document.getElementById('calcBack2').onclick = backspaceExpr;
+document.getElementById('calcBack3').onclick = backspaceExpr;
+document.getElementById('calcAC').onclick = clearExpr;
+document.getElementById('calcUndo').onclick = () => {
+  if (calcUndoStack.length === 0) return;
+  calcRedoStack.push(calcExpr);
+  calcExpr = calcUndoStack.pop();
+  updateCalcDisplay();
+};
+document.getElementById('calcRedo').onclick = () => {
+  if (calcRedoStack.length === 0) return;
+  calcUndoStack.push(calcExpr);
+  calcExpr = calcRedoStack.pop();
+  updateCalcDisplay();
+};
+
+/* Attach to all key buttons */
+document.querySelectorAll('.calc-keys .key[data-ins]').forEach(b => {
+  b.onclick = () => insertExpr(b.dataset.ins, b.dataset.label);
+});
+
+/* Display formatting */
+function formatDisplay(s) {
+  return s
+    .replace(/\*/g, '×')
+    .replace(/\//g, '÷')
+    .replace(/pi/g, 'π')
+    .replace(/sqrt\(/g, '√(')
+    .replace(/cbrt\(/g, '∛(')
+    .replace(/asin\(/g, 'sin⁻¹(')
+    .replace(/acos\(/g, 'cos⁻¹(')
+    .replace(/atan\(/g, 'tan⁻¹(')
+    .replace(/e\^\(/g, 'e^(')
+    .replace(/ans/g, 'ans');
+}
+
+function updateCalcDisplay() {
+  calcExprEl.textContent = calcExpr ? formatDisplay(calcExpr) : '0';
+  // Try live evaluation (preview)
+  try {
+    const r = evaluateExpression(calcExpr);
+    if (r !== null && isFinite(r)) {
+      const formatted = formatResultNumber(r);
+      calcResultEl.textContent = formatted;
+      calcResultEl.classList.remove('error');
+    } else {
+      calcResultEl.textContent = '0';
+      calcResultEl.classList.remove('error');
+    }
+  } catch(e) {
+    calcResultEl.textContent = '0';
+    calcResultEl.classList.remove('error');
+  }
+}
+
+function formatResultNumber(r) {
+  if (Math.abs(r) < 1e-10) r = 0; // avoid tiny floating errors
+  // Round to 10 sig digits
+  const rounded = Math.round(r * 1e10) / 1e10;
+  let s = String(rounded);
+  // Use exponential for very large/small
+  if (Math.abs(rounded) >= 1e15 || (Math.abs(rounded) < 1e-6 && rounded !== 0)) {
+    s = rounded.toExponential(6);
+  }
+  return s;
+}
+
+/* ===== Expression Evaluator ===== */
+function evaluateExpression(expr) {
+  if (!expr.trim()) return null;
+  // Replace constants
+  let s = expr;
+  // 'ans' → last answer
+  s = s.replace(/\bans\b/g, '(' + calcLastAns + ')');
+  // pi → Math.PI
+  s = s.replace(/\bpi\b/g, '(' + Math.PI + ')');
+  // 'e' as constant (but not in function names like e^x which uses e^(  ))
+  // Replace e^ before bare e
+  s = s.replace(/\be\^/g, 'Math.exp(');
+  s = s.replace(/\be\b/g, '(' + Math.E + ')');
+  // close exp parenthesis if user didn't (rare); leave to user.
+  // Functions
+  const toRad = (x) => angleMode === 'DRJT' ? x * Math.PI / 180 : x;
+  const fromRad = (x) => angleMode === 'DRJT' ? x * 180 / Math.PI : x;
+  s = s.replace(/\bsin\(/g, `__sin(`);
+  s = s.replace(/\bcos\(/g, `__cos(`);
+  s = s.replace(/\btan\(/g, `__tan(`);
+  s = s.replace(/\basin\(/g, `__asin(`);
+  s = s.replace(/\bacos\(/g, `__acos(`);
+  s = s.replace(/\batan\(/g, `__atan(`);
+  s = s.replace(/\bsqrt\(/g, `Math.sqrt(`);
+  s = s.replace(/\bcbrt\(/g, `Math.cbrt(`);
+  s = s.replace(/\bln\(/g, `Math.log(`);
+  s = s.replace(/\blog\(/g, `Math.log10(`);
+  s = s.replace(/\babs\(/g, `Math.abs(`);
+  s = s.replace(/\bround\(/g, `Math.round(`);
+  s = s.replace(/\be\(/g, `Math.exp(`); // fallback
+  // Statistical functions: mean([1,2,3]), stdev, stdevp
+  s = s.replace(/\bmean\(/g, '__mean(');
+  s = s.replace(/\bstdevp\(/g, '__stdevp(');
+  s = s.replace(/\bstdev\(/g, '__stdev(');
+  // Combinatorics
+  s = s.replace(/\bnPr\(/g, '__nPr(');
+  s = s.replace(/\bnCr\(/g, '__nCr(');
+  // Factorial: ! → __fact(prev)
+  s = s.replace(/(\d+(?:\.\d+)?)\!/g, '__fact($1)');
+  s = s.replace(/\)\!/g, ')!'); // (expr)! — handle below with token transform
+  // Fraction helper
+  s = s.replace(/\bfrac\(/g, '__frac(');
+  // ^ → ** (power)
+  s = s.replace(/\^/g, '**');
+  // % → /100
+  s = s.replace(/%/g, '/100');
+
+  // Define helpers
+  const __sin = (x) => Math.sin(toRad(x));
+  const __cos = (x) => Math.cos(toRad(x));
+  const __tan = (x) => Math.tan(toRad(x));
+  const __asin = (x) => fromRad(Math.asin(x));
+  const __acos = (x) => fromRad(Math.acos(x));
+  const __atan = (x) => fromRad(Math.atan(x));
+  const __fact = (n) => { n = Math.floor(n); let r = 1; for (let i = 2; i <= n; i++) r *= i; return r; };
+  const __mean = (arr) => Array.isArray(arr) ? arr.reduce((a,b)=>a+b,0)/arr.length : NaN;
+  const __stdev = (arr) => {
+    if (!Array.isArray(arr) || arr.length < 2) return 0;
+    const m = arr.reduce((a,b)=>a+b,0)/arr.length;
+    return Math.sqrt(arr.reduce((a,b)=>a+(b-m)**2,0)/(arr.length-1));
+  };
+  const __stdevp = (arr) => {
+    if (!Array.isArray(arr)) return NaN;
+    const m = arr.reduce((a,b)=>a+b,0)/arr.length;
+    return Math.sqrt(arr.reduce((a,b)=>a+(b-m)**2,0)/arr.length);
+  };
+  const __nPr = (n, r) => __fact(n) / __fact(n-r);
+  const __nCr = (n, r) => __fact(n) / (__fact(r) * __fact(n-r));
+  const __frac = (a, b) => a / b;
+
+  // Convert [1,2,3] arrays - JS supports natively
+  try {
+    const result = Function(
+      '__sin','__cos','__tan','__asin','__acos','__atan','__fact','__mean','__stdev','__stdevp','__nPr','__nCr','__frac',
+      `return (${s});`
+    )(__sin,__cos,__tan,__asin,__acos,__atan,__fact,__mean,__stdev,__stdevp,__nPr,__nCr,__frac);
+    return typeof result === 'number' ? result : null;
+  } catch(e) {
+    return null;
+  }
+}
+
+/* Equal buttons: compute and store as ans */
+function calcEqual() {
+  const r = evaluateExpression(calcExpr);
+  if (r === null || !isFinite(r)) {
+    calcResultEl.textContent = 'Error';
+    calcResultEl.classList.add('error');
+    return;
+  }
+  calcLastAns = r;
+  const formatted = formatResultNumber(r);
+  calcExprEl.textContent = formatDisplay(calcExpr) + ' =';
+  calcResultEl.textContent = formatted;
+  calcResultEl.classList.remove('error');
+  // Replace expression with the answer so user can continue operations
+  pushUndo();
+  calcExpr = formatted.replace(/×/g,'*').replace(/÷/g,'/').replace(/π/g,'pi');
+}
+document.getElementById('calcEquals').onclick = calcEqual;
+document.getElementById('calcEquals2').onclick = calcEqual;
+document.getElementById('calcEquals3').onclick = calcEqual;
+
+/* Write result to canvas */
+function writeResultToCanvas() {
+  const text = calcResultEl.textContent.trim();
+  if (!text || text === '0' || calcResultEl.classList.contains('error')) {
+    showToast('Hitung dulu sebelum menulis');
+    return;
+  }
+  const w = canvas.width / (window.devicePixelRatio || 1);
+  const h = canvas.height / (window.devicePixelRatio || 1);
+  saveState();
+  // If expression has = show full thing, else just result
+  const exprText = calcExprEl.textContent.trim();
+  const displayText = exprText.endsWith('=') ? exprText + ' ' + text : text;
+  // Auto-size font based on text length
+  const fontSize = Math.min(w, h) * (displayText.length > 12 ? 0.15 : 0.25);
+  ctx.fillStyle = currentColor;
+  ctx.font = `bold ${fontSize}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(displayText, w/2, h/2);
+  calcOverlay.classList.remove('show');
+  showToast('Hasil ditulis di papan');
+}
+document.getElementById('calcWrite').onclick = writeResultToCanvas;
+document.getElementById('calcWrite2').onclick = writeResultToCanvas;
+document.getElementById('calcWrite3').onclick = writeResultToCanvas;
+
+/* Copy result to clipboard */
+document.getElementById('copyBtn').onclick = () => {
+  const text = calcResultEl.textContent.trim();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => showToast('Disalin: ' + text));
+  } else {
+    showToast(text);
+  }
+};
+
+/* Keyboard support for calculator (when open) */
+document.addEventListener('keydown', e => {
+  if (!calcOverlay.classList.contains('show')) return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  const k = e.key;
+  if (/[0-9.+\-*/()^%]/.test(k)) {
+    insertExpr(k);
+    e.preventDefault();
+  } else if (k === 'Enter' || k === '=') {
+    calcEqual();
+    e.preventDefault();
+  } else if (k === 'Backspace') {
+    backspaceExpr();
+    e.preventDefault();
+  } else if (k === 'Escape') {
+    calcOverlay.classList.remove('show');
+  }
+});
+
+updateCalcDisplay();
+
+/* ===== Student Assessment ===== */
+let students = JSON.parse(localStorage.getItem('ptg_students') || '[]');
+
+function saveStudents() {
+  localStorage.setItem('ptg_students', JSON.stringify(students));
+}
+
+function gradeColor(score) {
+  if (score < 60) return 'low';
+  if (score < 75) return 'mid';
+  return '';
+}
+
+function gradeLabel(score) {
+  if (score >= 90) return 'A (Sangat Baik)';
+  if (score >= 80) return 'B (Baik)';
+  if (score >= 70) return 'C (Cukup)';
+  if (score >= 60) return 'D (Kurang)';
+  return 'E (Sangat Kurang)';
+}
+
+function initials(name) {
+  return name.trim().split(/\s+/).slice(0,2).map(w => w[0]||'').join('').toUpperCase() || '?';
+}
+
+function renderStudents() {
+  const list = document.getElementById('studentList');
+  if (students.length === 0) {
+    list.innerHTML = '<div class="empty-state">Belum ada nilai.<br>Tambahkan siswa pertama di atas.</div>';
+  } else {
+    list.innerHTML = students.map((s, i) => `
+      <div class="student-card">
+        <div class="student-avatar">${initials(s.name)}</div>
+        <div class="student-info">
+          <div class="student-name">${escapeHtml(s.name)} ${s.nis ? '· '+escapeHtml(s.nis) : ''}</div>
+          <div class="student-meta">${escapeHtml(s.assignment||'-')} · ${gradeLabel(s.score)}</div>
+        </div>
+        <div class="student-score ${gradeColor(s.score)}">${s.score}</div>
+        <button class="del-btn" data-i="${i}" title="Hapus">✕</button>
+      </div>
+    `).join('');
+    list.querySelectorAll('.del-btn').forEach(b => {
+      b.onclick = () => {
+        if (confirm('Hapus nilai siswa ini?')) {
+          students.splice(+b.dataset.i, 1);
+          saveStudents();
+          renderStudents();
+          showToast('Nilai dihapus');
+        }
+      };
+    });
+  }
+  const scores = students.map(s => +s.score || 0);
+  document.getElementById('statTotal').textContent = students.length;
+  document.getElementById('statAvg').textContent = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : '0';
+  document.getElementById('statHigh').textContent = scores.length ? Math.max(...scores) : '0';
+  document.getElementById('statLow').textContent = scores.length ? Math.min(...scores) : '0';
+}
+
+document.getElementById('addStudent').onclick = () => {
+  const name = document.getElementById('studentName').value.trim();
+  const nis = document.getElementById('studentNis').value.trim();
+  const assignment = document.getElementById('assignmentName').value.trim();
+  const score = +document.getElementById('studentScore').value;
+  if (!name) { showToast('Isi nama siswa dulu'); return; }
+  if (isNaN(score) || score < 0 || score > 100) { showToast('Nilai 0-100'); return; }
+  students.push({ name, nis, assignment, score, date: new Date().toISOString() });
+  saveStudents();
+  document.getElementById('studentName').value = '';
+  document.getElementById('studentNis').value = '';
+  document.getElementById('studentScore').value = '';
+  renderStudents();
+  showToast('Nilai tersimpan');
+};
+document.getElementById('studentScore').addEventListener('keypress', e => {
+  if (e.key === 'Enter') document.getElementById('addStudent').click();
+});
+
+/* ===== Export CSV ===== */
+document.getElementById('exportCSV').onclick = () => {
+  if (students.length === 0) { showToast('Belum ada data'); return; }
+  const subj = document.getElementById('subjectInput').value;
+  const kls = document.getElementById('classInput').value;
+  const rows = [['No','Nama','NIS','Tugas/Ujian','Nilai','Predikat','Tanggal']];
+  students.forEach((s, i) => rows.push([
+    i+1, s.name, s.nis||'', s.assignment||'', s.score, gradeLabel(s.score),
+    new Date(s.date).toLocaleDateString('id-ID')
+  ]));
+  const csv = '\uFEFF' + rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Nilai_${subj}_${kls}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  showToast('CSV diunduh');
+};
+
+/* ===== Raport / Report Preview ===== */
+let reportMode = 'siswa'; // 'siswa' | 'kelas'
+let selectedStudentKey = ''; // unique key for selected student (name + nis)
+
+/* Build unique student list (one entry per nama+nis) from students array */
+function getUniqueStudents() {
+  const map = new Map();
+  students.forEach(s => {
+    const key = (s.name || '').toLowerCase() + '|' + (s.nis || '');
+    if (!map.has(key)) {
+      map.set(key, { name: s.name, nis: s.nis || '', key,
+        subjects: [], scores: [], assignments: [] });
+    }
+    const entry = map.get(key);
+    entry.subjects.push(s.assignment || 'Nilai');
+    entry.scores.push(+s.score || 0);
+    entry.assignments.push({ name: s.assignment || 'Nilai', score: +s.score || 0, date: s.date });
+  });
+  return Array.from(map.values());
+}
+
+/* Populate student dropdown + render */
+function renderStudentDropdown(filter = '') {
+  const sel = document.getElementById('studentSelect');
+  const unique = getUniqueStudents();
+  const filtered = filter
+    ? unique.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()) ||
+                          s.nis.toLowerCase().includes(filter.toLowerCase()))
+    : unique;
+  const cur = selectedStudentKey;
+  sel.innerHTML = '<option value="">-- Pilih Siswa (' + filtered.length + ') --</option>' +
+    filtered.map(s => `<option value="${escapeHtml(s.key)}">${escapeHtml(s.name)}${s.nis ? ' · NIS ' + escapeHtml(s.nis) : ''}</option>`).join('');
+  if (cur && filtered.some(s => s.key === cur)) sel.value = cur;
+}
+
+/* Search input → filter dropdown */
+document.getElementById('searchStudent').addEventListener('input', e => {
+  renderStudentDropdown(e.target.value);
+});
+
+/* Select student → render individual report */
+document.getElementById('studentSelect').addEventListener('change', e => {
+  selectedStudentKey = e.target.value;
+  renderReport();
+});
+
+/* Mode toggle buttons */
+document.getElementById('modeKelas').onclick = () => {
+  reportMode = 'kelas';
+  document.getElementById('modeKelas').style.background = '#1a73e8';
+  document.getElementById('modeSiswa').style.background = '#34a853';
+  renderReport();
+};
+document.getElementById('modeSiswa').onclick = () => {
+  reportMode = 'siswa';
+  document.getElementById('modeSiswa').style.background = '#1a73e8';
+  document.getElementById('modeKelas').style.background = '#34a853';
+  renderReport();
+};
+
+function renderReport() {
+  const empty = document.getElementById('reportEmpty');
+  const content = document.getElementById('reportContent');
+  if (students.length === 0) {
+    empty.style.display = '';
+    empty.innerHTML = 'Belum ada data nilai.<br>Tambahkan data di tab Penilaian terlebih dahulu.';
+    content.style.display = 'none';
+    return;
+  }
+  // Refresh dropdown in case new students added
+  renderStudentDropdown(document.getElementById('searchStudent').value);
+
+  if (reportMode === 'siswa') {
+    if (!selectedStudentKey) {
+      empty.style.display = '';
+      empty.innerHTML = '🔍 Pilih siswa dari daftar di atas<br>untuk menampilkan raport per-siswa.<br><br>Atau klik "Raport Kelas" untuk melihat semua nilai sekaligus.';
+      content.style.display = 'none';
+      return;
+    }
+    renderStudentReport();
+  } else {
+    renderClassReport();
+  }
+}
+
+/* ===== Raport per-Siswa ===== */
+function renderStudentReport() {
+  const empty = document.getElementById('reportEmpty');
+  const content = document.getElementById('reportContent');
+  const unique = getUniqueStudents();
+  const student = unique.find(s => s.key === selectedStudentKey);
+  if (!student) {
+    empty.style.display = '';
+    content.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  content.style.display = '';
+
+  const subj = document.getElementById('subjectInput').value || '-';
+  const kls = document.getElementById('classInput').value || '-';
+  const guru = document.getElementById('teacherInput').value || '-';
+  const sekolah = document.getElementById('reportSchool').value || '-';
+  const semester = document.getElementById('reportSemester').value || '-';
+  const scores = student.scores;
+  const avg = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(2) : '0';
+  const max = scores.length ? Math.max(...scores) : 0;
+  const min = scores.length ? Math.min(...scores) : 0;
+  const now = new Date();
+  const tgl = `${HARI_ID[now.getDay()]}, ${now.getDate()} ${BULAN_ID[now.getMonth()]} ${now.getFullYear()}`;
+
+  content.innerHTML = `
+    <div style="text-align:center;border-bottom:3px solid #1a73e8;padding-bottom:12px;margin-bottom:14px">
+      <div style="font-size:18px;font-weight:700;color:#1a73e8">${escapeHtml(sekolah)}</div>
+      <div style="font-size:15px;font-weight:600;color:#202124;margin-top:4px">RAPORT SISWA</div>
+      <div style="font-size:12px;color:#5f6368;margin-top:2px">Semester ${escapeHtml(semester)}</div>
+    </div>
+
+    <div style="display:flex;gap:14px;margin-bottom:14px;background:#f8f9fa;padding:12px;border-radius:10px">
+      <div style="width:60px;height:60px;border-radius:50%;background:#1a73e8;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:22px;flex-shrink:0">
+        ${initials(student.name)}
+      </div>
+      <div style="flex:1">
+        <div style="font-size:16px;font-weight:700;color:#202124">${escapeHtml(student.name)}</div>
+        ${student.nis ? `<div style="font-size:12px;color:#5f6368;margin-top:2px">NIS: ${escapeHtml(student.nis)}</div>` : ''}
+        <div style="font-size:12px;color:#5f6368;margin-top:2px">Kelas: ${escapeHtml(kls)}</div>
+        <div style="font-size:12px;color:#5f6368;margin-top:2px">Wali Kelas / Guru: ${escapeHtml(guru)}</div>
+      </div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px">
+      <thead>
+        <tr style="background:#1a73e8;color:#fff">
+          <th style="padding:8px;border:1px solid #1a73e8;text-align:center;width:40px">No</th>
+          <th style="padding:8px;border:1px solid #1a73e8;text-align:left">Mata Pelajaran / Penilaian</th>
+          <th style="padding:8px;border:1px solid #1a73e8;text-align:center;width:80px">Nilai</th>
+          <th style="padding:8px;border:1px solid #1a73e8;text-align:left">Predikat</th>
+          <th style="padding:8px;border:1px solid #1a73e8;text-align:center;width:90px">Deskripsi</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${student.assignments.map((a, i) => `
+          <tr style="background:${i%2?'#f8f9fa':'#fff'}">
+            <td style="padding:7px 8px;border:1px solid #e8eaed;text-align:center">${i+1}</td>
+            <td style="padding:7px 8px;border:1px solid #e8eaed">${escapeHtml(a.name)}</td>
+            <td style="padding:7px 8px;border:1px solid #e8eaed;text-align:center;font-weight:700;color:${a.score<60?'#ea4335':a.score<75?'#f9ab00':'#34a853'}">${a.score}</td>
+            <td style="padding:7px 8px;border:1px solid #e8eaed">${gradeLabel(a.score)}</td>
+            <td style="padding:7px 8px;border:1px solid #e8eaed;font-size:11px">${descByScore(a.score)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+      <tfoot>
+        <tr style="background:#e8f0fe;font-weight:700">
+          <td colspan="2" style="padding:8px;border:1px solid #1a73e8;text-align:right">Rata-rata</td>
+          <td style="padding:8px;border:1px solid #1a73e8;text-align:center;color:#1a73e8">${avg}</td>
+          <td colspan="2" style="padding:8px;border:1px solid #1a73e8;font-size:11px">${gradeLabel(+avg)}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div style="margin-top:10px;padding:12px;background:#fef7e0;border-radius:8px;font-size:13px">
+      <b>Catatan:</b> ${notesByAvg(+avg, student.name)}
+    </div>
+
+    <div style="margin-top:14px;padding:10px;background:#e6f4ea;border-radius:8px;font-size:13px">
+      <b>Ringkasan:</b> Tertinggi <b>${max}</b> · Terendah <b>${min}</b> · Jumlah Penilaian <b>${scores.length}</b> · Status: <b>${+avg >= 70 ? 'TUNTAS' : 'PERLU BIMBINGAN'}</b>
+    </div>
+
+    <div style="margin-top:30px;display:flex;justify-content:space-between;font-size:12px">
+      <div style="text-align:center">
+        <div>Orang Tua / Wali</div>
+        <div style="margin-top:50px;border-top:1px solid #000;padding-top:4px;min-width:140px">(.................................)</div>
+      </div>
+      <div style="text-align:center">
+        <div>${escapeHtml(sekolah)}</div>
+        <div style="margin-top:2px">${tgl}</div>
+        <div style="margin-top:50px;border-top:1px solid #000;padding-top:4px;font-weight:700">${escapeHtml(guru)}</div>
+        <div style="font-size:10px;color:#5f6368">Guru Mata Pelajaran</div>
+      </div>
+    </div>
+  `;
+}
+
+/* Helper: description by score range */
+function descByScore(score) {
+  if (score >= 90) return 'Sangat Baik';
+  if (score >= 80) return 'Baik';
+  if (score >= 70) return 'Cukup';
+  if (score >= 60) return 'Kurang';
+  return 'Perlu Bimbingan';
+}
+
+/* Helper: teacher note based on average */
+function notesByAvg(avg, name) {
+  if (avg >= 85) return `Siswa ${name} menunjukkan prestasi yang sangat baik. Pertahankan semangat belajar dan terus tingkatkan kemampuan.`;
+  if (avg >= 75) return `Siswa ${name} menunjukkan prestasi yang baik. Tingkatkan lagi belajar untuk meraih hasil yang lebih maksimal.`;
+  if (avg >= 70) return `Siswa ${name} cukup menguasai materi. Perlu peningkatan pada beberapa topik untuk hasil yang lebih baik.`;
+  if (avg >= 60) return `Siswa ${name} perlu meningkatkan ketekunan belajar. Disarankan ikut bimbingan tambahan.`;
+  return `Siswa ${name} memerlukan perhatian khusus dan bimbingan lebih intensif agar dapat menguasai materi dengan baik.`;
+}
+
+/* ===== Raport Kelas (semua siswa) ===== */
+function renderClassReport() {
+  const empty = document.getElementById('reportEmpty');
+  const content = document.getElementById('reportContent');
+  empty.style.display = 'none';
+  content.style.display = '';
+  const subj = document.getElementById('subjectInput').value || '-';
+  const kls = document.getElementById('classInput').value || '-';
+  const guru = document.getElementById('teacherInput').value || '-';
+  const sekolah = document.getElementById('reportSchool').value || '-';
+  const semester = document.getElementById('reportSemester').value || '-';
+  const scores = students.map(s => +s.score || 0);
+  const avg = (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(2);
+  const max = Math.max(...scores);
+  const min = Math.min(...scores);
+  const lulus = scores.filter(s => s >= 70).length;
+  const now = new Date();
+  const tgl = `${HARI_ID[now.getDay()]}, ${now.getDate()} ${BULAN_ID[now.getMonth()]} ${now.getFullYear()}`;
+
+  content.innerHTML = `
+    <div style="text-align:center;border-bottom:2px solid #1a73e8;padding-bottom:10px;margin-bottom:14px">
+      <div style="font-size:18px;font-weight:700;color:#1a73e8">${escapeHtml(sekolah)}</div>
+      <div style="font-size:13px;color:#5f6368;margin-top:4px">LAPORAN PENILAIAN KELAS</div>
+      <div style="font-size:11px;color:#9aa0a6;margin-top:2px">${escapeHtml(semester)}</div>
+    </div>
+    <table style="width:100%;font-size:13px;margin-bottom:12px">
+      <tr><td style="padding:3px 0;width:120px;color:#5f6368">Mata Pelajaran</td><td>: <b>${escapeHtml(subj)}</b></td></tr>
+      <tr><td style="padding:3px 0;color:#5f6368">Kelas</td><td>: ${escapeHtml(kls)}</td></tr>
+      <tr><td style="padding:3px 0;color:#5f6368">Guru</td><td>: ${escapeHtml(guru)}</td></tr>
+      <tr><td style="padding:3px 0;color:#5f6368">Tanggal Cetak</td><td>: ${tgl}</td></tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="background:#1a73e8;color:#fff">
+          <th style="padding:8px;border:1px solid #1a73e8;text-align:left">No</th>
+          <th style="padding:8px;border:1px solid #1a73e8;text-align:left">Nama</th>
+          <th style="padding:8px;border:1px solid #1a73e8;text-align:left">NIS</th>
+          <th style="padding:8px;border:1px solid #1a73e8;text-align:left">Tugas/Ujian</th>
+          <th style="padding:8px;border:1px solid #1a73e8;text-align:center">Nilai</th>
+          <th style="padding:8px;border:1px solid #1a73e8;text-align:left">Predikat</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${students.map((s,i) => `
+          <tr style="background:${i%2?'#f8f9fa':'#fff'}">
+            <td style="padding:7px 8px;border:1px solid #e8eaed">${i+1}</td>
+            <td style="padding:7px 8px;border:1px solid #e8eaed">${escapeHtml(s.name)}</td>
+            <td style="padding:7px 8px;border:1px solid #e8eaed">${escapeHtml(s.nis||'-')}</td>
+            <td style="padding:7px 8px;border:1px solid #e8eaed">${escapeHtml(s.assignment||'-')}</td>
+            <td style="padding:7px 8px;border:1px solid #e8eaed;text-align:center;font-weight:700;color:${s.score<60?'#ea4335':s.score<75?'#f9ab00':'#34a853'}">${s.score}</td>
+            <td style="padding:7px 8px;border:1px solid #e8eaed">${gradeLabel(s.score)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <div style="margin-top:14px;padding:12px;background:#f1f3f4;border-radius:8px;font-size:13px">
+      <b>Ringkasan:</b> Rata-rata kelas <b>${avg}</b> · Tertinggi <b>${max}</b> · Terendah <b>${min}</b> · Tuntas (≥70): <b>${lulus} dari ${students.length} siswa</b>
+    </div>
+    <div style="margin-top:24px;display:flex;justify-content:space-between;font-size:13px">
+      <div></div>
+      <div style="text-align:center">
+        <div>${escapeHtml(sekolah)}</div>
+        <div style="margin-top:4px">${tgl}</div>
+        <div style="margin-top:60px;border-top:1px solid #000;padding-top:4px;font-weight:600">${escapeHtml(guru)}</div>
+        <div style="font-size:11px;color:#5f6368">Guru Mata Pelajaran</div>
+      </div>
+    </div>
+  `;
+}
+
+/* ===== Print / PDF ===== */
+document.getElementById('printPDF').onclick = () => {
+  if (students.length === 0) { showToast('Belum ada data'); return; }
+  if (reportMode === 'siswa' && !selectedStudentKey) {
+    showToast('Pilih siswa dulu untuk cetak raport per-siswa');
+    return;
+  }
+  renderReport();
+  const content = document.getElementById('reportContent').innerHTML;
+  const title = reportMode === 'siswa'
+    ? 'Raport ' + (getUniqueStudents().find(s => s.key === selectedStudentKey)?.name || '')
+    : 'Raport Kelas - ' + document.getElementById('subjectInput').value;
+  const w = window.open('', '_blank');
+  w.document.write(`
+    <html><head><title>${escapeHtml(title)}</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:24px;color:#202124}
+      h1{color:#1a73e8;text-align:center;margin-bottom:4px}
+      table{width:100%;border-collapse:collapse;font-size:12px}
+      th,td{border:1px solid #999;padding:6px 8px;text-align:left}
+      th{background:#1a73e8;color:#fff}
+      @media print { body { padding: 12px; } }
+    </style></head><body>
+    ${content}
+    <script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script>
+    </body></html>
+  `);
+  w.document.close();
+};
+
+/* ===== JSON Backup / Restore ===== */
+document.getElementById('exportJSON').onclick = () => {
+  const data = {
+    meta: {
+      subject: document.getElementById('subjectInput').value,
+      class: document.getElementById('classInput').value,
+      teacher: document.getElementById('teacherInput').value,
+      school: document.getElementById('reportSchool').value,
+      semester: document.getElementById('reportSemester').value,
+      exportedAt: new Date().toISOString()
+    },
+    students
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Backup_${data.meta.subject||'Nilai'}_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  showToast('Backup diunduh');
+};
+
+document.getElementById('importJSON').onclick = () => {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json';
+  inp.onchange = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const data = JSON.parse(r.result);
+        if (data.students && Array.isArray(data.students)) {
+          students = data.students;
+          saveStudents();
+          if (data.meta) {
+            if (data.meta.subject) document.getElementById('subjectInput').value = data.meta.subject;
+            if (data.meta.class) document.getElementById('classInput').value = data.meta.class;
+            if (data.meta.teacher) document.getElementById('teacherInput').value = data.meta.teacher;
+            if (data.meta.school) document.getElementById('reportSchool').value = data.meta.school;
+            if (data.meta.semester) document.getElementById('reportSemester').value = data.meta.semester;
+            ['subjectInput','classInput','teacherInput','reportSchool','reportSemester'].forEach(id => {
+              localStorage.setItem('ptg_'+id, document.getElementById(id).value);
+            });
+          }
+          renderStudents();
+          showToast('Data berhasil diimpor');
+        } else {
+          showToast('Format file tidak valid');
+        }
+      } catch(err) {
+        showToast('Gagal membaca file');
+      }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+};
+
+/* ===== Helpers ===== */
+function escapeHtml(s) {
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+/* ========================================================
+   EXAM MODULE - Bagikan Ujian / Ulangan Harian
+   ======================================================== */
+
+let examQuestions = [];
+let savedExams = JSON.parse(localStorage.getItem('ptg_exams') || '[]');
+let submittedAnswers = JSON.parse(localStorage.getItem('ptg_answers') || '[]');
+
+function saveExams() { localStorage.setItem('ptg_exams', JSON.stringify(savedExams)); }
+function saveAnswers() { localStorage.setItem('ptg_answers', JSON.stringify(submittedAnswers)); }
+
+/* Add Multiple Choice question */
+document.getElementById('addMcQuestion').onclick = () => {
+  examQuestions.push({
+    id: Date.now() + Math.random(),
+    type: 'mc',
+    text: '',
+    image: '',
+    options: ['', '', '', ''],
+    correct: 0,
+    points: 10
+  });
+  renderExamQuestions();
+};
+/* Add Essay question */
+document.getElementById('addEssayQuestion').onclick = () => {
+  examQuestions.push({
+    id: Date.now() + Math.random(),
+    type: 'essay',
+    text: '',
+    image: '',
+    answer: '',
+    points: 20
+  });
+  renderExamQuestions();
+};
+
+/* Handle image upload — convert to base64 */
+function handleImageUpload(file, qi) {
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { showToast('File harus gambar'); return; }
+  if (file.size > 2 * 1024 * 1024) { showToast('Maksimal 2MB'); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    examQuestions[qi].image = reader.result; // base64 data URL
+    renderExamQuestions();
+    showToast('Gambar ditambahkan');
+  };
+  reader.onerror = () => showToast('Gagal membaca file');
+  reader.readAsDataURL(file);
+}
+
+function renderExamQuestions() {
+  const wrap = document.getElementById('examQuestions');
+  if (examQuestions.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">Belum ada soal.<br>Klik "+ Pilihan Ganda" atau "+ Essay" untuk menambah soal.</div>';
+    return;
+  }
+  wrap.innerHTML = examQuestions.map((q, i) => `
+    <div class="question-card ${q.type === 'essay' ? 'essay' : ''}" data-qi="${i}">
+      <div class="question-head">
+        <span class="question-num">Soal ${i+1}</span>
+        <span class="question-type">${q.type === 'mc' ? 'Pilihan Ganda' : 'Essay'}</span>
+        <div class="q-points">Poin: <input type="number" class="q-points-input" data-qi="${i}" value="${q.points}" min="0" max="100"></div>
+        <button class="q-del-btn" data-del="${i}" title="Hapus">✕</button>
+      </div>
+      <textarea class="q-text" data-qi="${i}" placeholder="Tulis pertanyaan di sini...">${escapeHtml(q.text)}</textarea>
+      <div class="q-image-area">
+        ${q.image ? `
+          <div class="q-image-preview">
+            <img src="${q.image}" alt="Gambar soal" class="q-image-img">
+            <div class="q-image-actions">
+              <button class="q-img-btn" data-replace-img="${i}">🔄 Ganti</button>
+              <button class="q-img-btn del" data-del-img="${i}">✕ Hapus</button>
+            </div>
+          </div>
+        ` : `
+          <button class="q-img-btn add" data-add-img="${i}">📷 Tambah Gambar / Foto</button>
+        `}
+        <input type="file" accept="image/*" class="q-img-input hidden" data-img-input="${i}">
+      </div>
+      ${q.type === 'mc' ? `
+        <div class="q-options">
+          ${q.options.map((opt, oi) => `
+            <div class="q-option">
+              <input type="radio" name="correct-${i}" class="q-option-radio" data-qi="${i}" data-oi="${oi}" ${q.correct === oi ? 'checked' : ''}>
+              <input type="text" class="q-option-input" data-qi="${i}" data-oi="${oi}" placeholder="Pilihan ${String.fromCharCode(65+oi)}" value="${escapeHtml(opt)}">
+              ${q.options.length > 2 ? `<button class="q-option-del" data-delopt-qi="${i}" data-delopt-oi="${oi}">✕</button>` : ''}
+            </div>
+          `).join('')}
+          ${q.options.length < 6 ? `<button class="q-add-option" data-addopt="${i}">+ Tambah Pilihan</button>` : ''}
+        </div>
+      ` : `
+        <div style="font-size:11px;color:#5f6368;background:#fef7e0;padding:8px;border-radius:6px">
+          💡 Kunci jawaban / pedoman penilaian (hanya dilihat guru):<br>
+          <textarea class="q-text" data-essay-key="${i}" placeholder="Kunci jawaban atau pedoman pemberian nilai..." style="min-height:40px;margin-top:6px">${escapeHtml(q.answer || '')}</textarea>
+        </div>
+      `}
+    </div>
+  `).join('');
+
+  // Attach event listeners
+  wrap.querySelectorAll('.q-text[data-qi]').forEach(el => {
+    el.oninput = e => { examQuestions[+e.target.dataset.qi].text = e.target.value; };
+  });
+  wrap.querySelectorAll('.q-text[data-essay-key]').forEach(el => {
+    el.oninput = e => { examQuestions[+e.target.dataset.essayKey].answer = e.target.value; };
+  });
+  wrap.querySelectorAll('.q-points-input').forEach(el => {
+    el.oninput = e => { examQuestions[+e.target.dataset.qi].points = +e.target.value; };
+  });
+  wrap.querySelectorAll('.q-option-input').forEach(el => {
+    el.oninput = e => { examQuestions[+e.target.dataset.qi].options[+e.target.dataset.oi] = e.target.value; };
+  });
+  wrap.querySelectorAll('.q-option-radio').forEach(el => {
+    el.onchange = e => { examQuestions[+e.target.dataset.qi].correct = +e.target.dataset.oi; };
+  });
+  wrap.querySelectorAll('[data-addopt]').forEach(el => {
+    el.onclick = () => {
+      const qi = +el.dataset.addopt;
+      examQuestions[qi].options.push('');
+      renderExamQuestions();
+    };
+  });
+  wrap.querySelectorAll('[data-delopt-qi]').forEach(el => {
+    el.onclick = () => {
+      const qi = +el.dataset.deloptQi;
+      const oi = +el.dataset.deloptOi;
+      examQuestions[qi].options.splice(oi, 1);
+      if (examQuestions[qi].correct >= oi && examQuestions[qi].correct > 0) examQuestions[qi].correct--;
+      renderExamQuestions();
+    };
+  });
+  wrap.querySelectorAll('[data-del]').forEach(el => {
+    el.onclick = () => {
+      if (confirm('Hapus soal ini?')) {
+        examQuestions.splice(+el.dataset.del, 1);
+        renderExamQuestions();
+      }
+    };
+  });
+
+  // Image upload handlers
+  wrap.querySelectorAll('[data-add-img], [data-replace-img]').forEach(el => {
+    el.onclick = () => {
+      const qi = el.dataset.addImg !== undefined ? +el.dataset.addImg : +el.dataset.replaceImg;
+      const input = wrap.querySelector(`[data-img-input="${qi}"]`);
+      input.click();
+    };
+  });
+  wrap.querySelectorAll('[data-img-input]').forEach(el => {
+    el.onchange = e => {
+      const qi = +e.target.dataset.imgInput;
+      handleImageUpload(e.target.files[0], qi);
+    };
+  });
+  wrap.querySelectorAll('[data-del-img]').forEach(el => {
+    el.onclick = () => {
+      const qi = +el.dataset.delImg;
+      examQuestions[qi].image = '';
+      renderExamQuestions();
+      showToast('Gambar dihapus');
+    };
+  });
+}
+
+/* Build exam data object */
+function buildExamData() {
+  return {
+    id: 'exam_' + Date.now(),
+    title: document.getElementById('examTitle').value || 'Ujian Tanpa Judul',
+    type: document.getElementById('examType').value,
+    typeLabel: document.getElementById('examType').selectedOptions[0].text,
+    duration: +document.getElementById('examDuration').value || 60,
+    subject: document.getElementById('examSubject').value,
+    class: document.getElementById('examClass').value,
+    teacher: document.getElementById('teacherInput').value,
+    school: document.getElementById('reportSchool').value,
+    questions: examQuestions.map(q => ({
+      type: q.type, text: q.text,
+      image: q.image || '',
+      options: q.type === 'mc' ? [...q.options] : undefined,
+      correct: q.type === 'mc' ? q.correct : undefined,
+      answer: q.type === 'essay' ? q.answer : undefined,
+      points: q.points
+    })),
+    createdAt: new Date().toISOString()
+  };
+}
+
+/* Generate shareable link (data encoded in URL hash) */
+function generateShareLink(examData) {
+  // We use base64-encoded JSON in URL hash so it survives without server
+  const json = JSON.stringify(examData);
+  let b64;
+  try {
+    b64 = btoa(unescape(encodeURIComponent(json)));
+  } catch(e) {
+    b64 = btoa(json);
+  }
+  // Current page URL without hash
+  const baseUrl = location.href.split('#')[0];
+  // The viewer mode is triggered by hash starting with #exam=
+  return baseUrl + '#exam=' + b64;
+}
+
+/* Save exam + generate share link */
+document.getElementById('genShareLink').onclick = () => {
+  if (examQuestions.length === 0) { showToast('Tambahkan minimal 1 soal'); return; }
+  if (!document.getElementById('examTitle').value.trim()) {
+    showToast('Isi judul ujian dulu'); return;
+  }
+  const examData = buildExamData();
+  // Save to saved exams (avoid duplicate by id)
+  const existing = savedExams.findIndex(e => e.id === examData.id);
+  if (existing >= 0) savedExams[existing] = examData;
+  else savedExams.push(examData);
+  saveExams();
+
+  const link = generateShareLink(examData);
+  document.getElementById('shareLinkBox').style.display = '';
+  document.getElementById('shareLinkText').value = link;
+  // Save current link globally for other share buttons
+  window._currentShareLink = link;
+  window._currentExam = examData;
+  renderSavedExams();
+  showToast('Link ujian dibuat');
+};
+
+/* Copy link to clipboard */
+document.getElementById('copyShareLink').onclick = () => {
+  if (!window._currentShareLink) {
+    if (!confirm('Belum ada link. Buat sekarang?')) return;
+    document.getElementById('genShareLink').click();
+  }
+  const link = window._currentShareLink || document.getElementById('shareLinkText').value;
+  if (!link) { showToast('Buat link dulu'); return; }
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(link).then(() => showToast('Link disalin'));
+  } else {
+    const ta = document.getElementById('shareLinkText');
+    ta.select();
+    document.execCommand('copy');
+    showToast('Link disalin');
+  }
+};
+
+/* Open link in new tab */
+document.getElementById('openShareLink').onclick = () => {
+  if (!window._currentShareLink) {
+    if (!confirm('Belum ada link. Buat sekarang?')) return;
+    document.getElementById('genShareLink').click();
+  }
+  const link = window._currentShareLink || document.getElementById('shareLinkText').value;
+  if (!link) { showToast('Buat link dulu'); return; }
+  window.open(link, '_blank');
+};
+
+/* Share via WhatsApp */
+document.getElementById('shareWhatsApp').onclick = () => {
+  if (!window._currentShareLink) {
+    if (!confirm('Belum ada link. Buat sekarang?')) return;
+    document.getElementById('genShareLink').click();
+  }
+  const link = window._currentShareLink || document.getElementById('shareLinkText').value;
+  if (!link) { showToast('Buat link dulu'); return; }
+  const exam = window._currentExam;
+  const text = `📝 *${exam.title}*\n${exam.typeLabel} - ${exam.subject || '(mapel)'}\nKelas: ${exam.class || '-'}\nDurasi: ${exam.duration} menit\n\nKerjakan di sini:\n${link}`;
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+};
+
+/* Export as standalone HTML file */
+document.getElementById('exportExamHTML').onclick = () => {
+  if (examQuestions.length === 0) { showToast('Tambahkan minimal 1 soal'); return; }
+  const examData = buildExamData();
+  const html = generateStandaloneExamHTML(examData);
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Ujian_${examData.title.replace(/[^a-zA-Z0-9]/g,'_')}.html`;
+  a.click();
+  showToast('HTML standalone diunduh');
+};
+
+function generateStandaloneExamHTML(exam) {
+  return `<!DOCTYPE html>
+<html lang="id"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escapeHtml(exam.title)}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+  body { background: #e8f0fe; min-height: 100vh; padding: 14px; color: #202124; }
+  .exam-header { background: #1a73e8; color: #fff; padding: 16px; border-radius: 12px; margin-bottom: 14px; }
+  .exam-title { font-size: 20px; font-weight: 700; }
+  .exam-meta { font-size: 13px; opacity: .9; margin-top: 6px; }
+  .timer { background: #fff; color: #1a73e8; padding: 10px 16px; border-radius: 10px; margin-bottom: 12px; font-weight: 700; font-size: 18px; text-align: center; position: sticky; top: 8px; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+  .q-card { background: #fff; padding: 14px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .q-num { background: #1a73e8; color: #fff; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; display: inline-block; }
+  .q-text { font-size: 15px; margin: 10px 0; line-height: 1.5; white-space: pre-wrap; }
+  .q-image-box { margin: 8px 0; text-align: center; }
+  .q-image-box img { max-width: 100%; max-height: 350px; border-radius: 8px; border: 1px solid #e8eaed; cursor: pointer; }
+  .q-image-box img:active { transform: scale(1.02); }
+  .q-options { display: flex; flex-direction: column; gap: 8px; }
+  .q-option { display: flex; align-items: center; gap: 10px; padding: 10px; border: 2px solid #e8eaed; border-radius: 8px; cursor: pointer; }
+  .q-option:hover { border-color: #1a73e8; background: #f8faff; }
+  .q-option input { width: 20px; height: 20px; accent-color: #1a73e8; }
+  .q-option .opt-label { font-size: 14px; }
+  .essay-input { width: 100%; min-height: 100px; border: 1px solid #dadce0; border-radius: 8px; padding: 10px; font-size: 14px; font-family: inherit; outline: none; }
+  .essay-input:focus { border-color: #1a73e8; }
+  .submit-bar { position: sticky; bottom: 8px; background: #fff; padding: 10px; border-radius: 10px; box-shadow: 0 -2px 8px rgba(0,0,0,.1); display: flex; gap: 8px; }
+  .submit-btn { flex: 1; background: #34a853; color: #fff; border: none; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .submit-btn.save { background: #1a73e8; }
+  .result-card { background: #fff; padding: 16px; border-radius: 12px; text-align: center; margin-top: 14px; }
+  .score-big { font-size: 48px; font-weight: 700; color: #34a853; }
+  .ident-form { background: #fff; padding: 14px; border-radius: 10px; margin-bottom: 12px; }
+  .ident-form input { width: 100%; padding: 10px; border: 1px solid #dadce0; border-radius: 8px; font-size: 14px; margin-bottom: 8px; outline: none; }
+  .ident-form input:focus { border-color: #1a73e8; }
+  .ident-form button { width: 100%; background: #1a73e8; color: #fff; border: none; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .hidden { display: none; }
+</style></head>
+<body>
+<div class="exam-header">
+  <div class="exam-title">${escapeHtml(exam.title)}</div>
+  <div class="exam-meta">${escapeHtml(exam.typeLabel)} · ${escapeHtml(exam.subject||'')}${exam.class ? ' · ' + escapeHtml(exam.class) : ''}<br>Guru: ${escapeHtml(exam.teacher||'-')} · ${escapeHtml(exam.school||'')}<br>Durasi: ${exam.duration} menit</div>
+</div>
+
+<div id="identForm" class="ident-form">
+  <h3 style="margin-bottom:10px;font-size:15px">Identitas Siswa</h3>
+  <input type="text" id="studentName" placeholder="Nama Lengkap">
+  <input type="text" id="studentNis" placeholder="NIS / NISN (opsional)">
+  <input type="text" id="studentClass" placeholder="Kelas (cth: VI-A)">
+  <button onclick="startExam()">Mulai Mengerjakan →</button>
+</div>
+
+<div id="examArea" class="hidden">
+  <div class="timer" id="timer">⏱ 00:00</div>
+  <div id="questionsArea"></div>
+  <div class="submit-bar">
+    <button class="submit-btn save" onclick="saveDraft()">💾 Simpan Draft</button>
+    <button class="submit-btn" onclick="submitExam()">✅ Kumpulkan</button>
+  </div>
+</div>
+
+<div id="resultArea" class="hidden"></div>
+
+<script>
+const EXAM_DATA = ${JSON.stringify(exam)};
+let answers = {};
+let startTime = 0;
+let timerInterval = null;
+let timeLeft = ${exam.duration} * 60;
+
+function startExam() {
+  const name = document.getElementById('studentName').value.trim();
+  if (!name) { alert('Isi nama dulu'); return; }
+  document.getElementById('identForm').classList.add('hidden');
+  document.getElementById('examArea').classList.remove('hidden');
+  renderQuestions();
+  startTimer();
+}
+
+function renderQuestions() {
+  const area = document.getElementById('questionsArea');
+  area.innerHTML = EXAM_DATA.questions.map((q, i) => \`
+    <div class="q-card">
+      <span class="q-num">Soal \${i+1} (\${q.points} poin)</span>
+      <div class="q-text">\${escapeHtmlSafe(q.text)}</div>
+      \${q.image ? \`<div class="q-image-box"><img src="\${q.image}" alt="Gambar soal \${i+1}" onclick="openImageFull(this.src)"></div>\` : ''}
+      \${q.type === 'mc' ? \`
+        <div class="q-options">
+          \${q.options.map((opt, oi) => \`
+            <label class="q-option">
+              <input type="radio" name="q\${i}" value="\${oi}" onchange="answers['\${i}'] = \${oi}">
+              <span class="opt-label"><b>\${String.fromCharCode(65+oi)}.</b> \${escapeHtmlSafe(opt)}</span>
+            </label>
+          \`).join('')}
+        </div>
+      \` : \`
+        <textarea class="essay-input" placeholder="Tulis jawaban Anda di sini..." oninput="answers['\${i}'] = this.value"></textarea>
+      \`}
+    </div>
+  \`).join('');
+}
+
+/* Image fullscreen viewer */
+function openImageFull(src) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;cursor:zoom-out';
+  overlay.innerHTML = '<img src="' + src + '" style="max-width:100%;max-height:100%;border-radius:8px">';
+  overlay.onclick = () => overlay.remove();
+  document.body.appendChild(overlay);
+}
+
+function escapeHtmlSafe(s) {
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function startTimer() {
+  startTime = Date.now();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      alert('Waktu habis! Jawaban otomatis dikumpulkan.');
+      submitExam(true);
+      return;
+    }
+    const m = Math.floor(timeLeft / 60);
+    const s = timeLeft % 60;
+    document.getElementById('timer').textContent = '⏱ ' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    if (timeLeft < 60) document.getElementById('timer').style.color = '#ea4335';
+  }, 1000);
+}
+
+function saveDraft() {
+  const data = {
+    exam: EXAM_DATA,
+    student: {
+      name: document.getElementById('studentName').value,
+      nis: document.getElementById('studentNis').value,
+      class: document.getElementById('studentClass').value
+    },
+    answers,
+    savedAt: new Date().toISOString()
+  };
+  try {
+    localStorage.setItem('draft_' + EXAM_DATA.id, JSON.stringify(data));
+    alert('Draft tersimpan. Anda bisa lanjut nanti.');
+  } catch(e) {
+    alert('Gagal menyimpan draft: ' + e.message);
+  }
+}
+
+function submitExam(auto) {
+  if (!auto) {
+    const unanswered = EXAM_DATA.questions.filter((q, i) => answers[i] === undefined || answers[i] === '').length;
+    if (unanswered > 0) {
+      if (!confirm('Masih ada ' + unanswered + ' soal belum dijawab. Yakin kumpulkan?')) return;
+    }
+  }
+  clearInterval(timerInterval);
+
+  // Calculate score for MC questions
+  let totalPoints = 0, earnedPoints = 0;
+  EXAM_DATA.questions.forEach((q, i) => {
+    totalPoints += q.points || 0;
+    if (q.type === 'mc' && answers[i] !== undefined && answers[i] === q.correct) {
+      earnedPoints += q.points || 0;
+    }
+  });
+  const score = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+
+  // Show result
+  const resultArea = document.getElementById('resultArea');
+  document.getElementById('examArea').classList.add('hidden');
+  resultArea.classList.remove('hidden');
+  resultArea.innerHTML = \`
+    <div class="result-card">
+      <h2>✅ Jawaban Terkumpul!</h2>
+      <div style="font-size:14px;color:#5f6368;margin:8px 0">\${escapeHtmlSafe(document.getElementById('studentName').value)}</div>
+      <div class="score-big">\${score}</div>
+      <div style="font-size:14px;color:#5f6368">dari 100 (Pilihan Ganda)</div>
+      <div style="margin-top:12px;font-size:13px;color:#5f6368">Jawaban benar: \${earnedPoints}/\${totalPoints} poin</div>
+      \${EXAM_DATA.questions.some(q => q.type === 'essay') ? '<div style="margin-top:8px;font-size:12px;color:#f9ab00">⚠️ Essay perlu dinilai manual oleh Guru</div>' : ''}
+    </div>
+    <div style="background:#fff;padding:14px;border-radius:10px;margin-top:12px">
+      <h3 style="margin-bottom:8px">📥 Kirim Jawaban ke Guru</h3>
+      <p style="font-size:12px;color:#5f6368;margin-bottom:8px">Salin teks di bawah, kirim via WhatsApp/Email ke Guru:</p>
+      <textarea id="answerExport" style="width:100%;min-height:120px;font-size:11px;font-family:monospace;border:1px solid #dadce0;border-radius:6px;padding:8px" readonly></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="submit-btn save" onclick="copyAnswer()">⧉ Salin</button>
+        <a class="submit-btn" id="waLink" target="_blank" style="text-decoration:none;display:flex;align-items:center;justify-content:center;background:#25d366">💬 WhatsApp</a>
+        <button class="submit-btn" onclick="window.print()">🖨️ Cetak</button>
+      </div>
+    </div>
+  \`;
+
+  // Build answer text
+  const student = {
+    name: document.getElementById('studentName').value,
+    nis: document.getElementById('studentNis').value,
+    class: document.getElementById('studentClass').value
+  };
+  const answerText = buildAnswerText(EXAM_DATA, student, answers, score);
+  document.getElementById('answerExport').value = answerText;
+
+  // WhatsApp link - try to detect teacher phone
+  const waText = encodeURIComponent(answerText);
+  document.getElementById('waLink').href = 'https://wa.me/?text=' + waText;
+
+  // Save to localStorage as submitted
+  try {
+    const submitted = JSON.parse(localStorage.getItem('submitted_answers') || '[]');
+    submitted.push({
+      examId: EXAM_DATA.id,
+      examTitle: EXAM_DATA.title,
+      student,
+      answers,
+      score,
+      submittedAt: new Date().toISOString()
+    });
+    localStorage.setItem('submitted_answers', JSON.stringify(submitted));
+  } catch(e) {}
+}
+
+function buildAnswerText(exam, student, answers, score) {
+  let text = '═══ JAWABAN UJIAN ═══\\n';
+  text += 'Judul: ' + exam.title + '\\n';
+  text += 'Nama: ' + student.name + '\\n';
+  if (student.nis) text += 'NIS: ' + student.nis + '\\n';
+  if (student.class) text += 'Kelas: ' + student.class + '\\n';
+  text += 'Mapel: ' + (exam.subject||'-') + '\\n';
+  text += 'Skor PG: ' + score + '/100\\n';
+  text += 'Waktu: ' + new Date().toLocaleString('id-ID') + '\\n';
+  text += '═══════════════════\\n\\n';
+  exam.questions.forEach((q, i) => {
+    text += 'Soal ' + (i+1) + ': ' + (q.text || '(kosong)') + '\\n';
+    if (q.type === 'mc') {
+      const ai = answers[i];
+      text += 'Jawaban: ' + (ai !== undefined ? String.fromCharCode(65+ai) + '. ' + (q.options[ai]||'') : '(kosong)') + '\\n';
+      text += 'Kunci: ' + String.fromCharCode(65+q.correct) + '. ' + (q.options[q.correct]||'') + '\\n';
+    } else {
+      text += 'Jawaban: ' + (answers[i] || '(kosong)') + '\\n';
+    }
+    text += '\\n';
+  });
+  return text;
+}
+
+function copyAnswer() {
+  const ta = document.getElementById('answerExport');
+  ta.select();
+  document.execCommand('copy');
+  alert('Jawaban disalin! Tempel ke WhatsApp/Email untuk dikirim ke Guru.');
+}
+<\/script>
+</body></html>`;
+}
+
+/* Render saved exams list */
+function renderSavedExams() {
+  const list = document.getElementById('savedExamsList');
+  if (savedExams.length === 0) {
+    list.innerHTML = '<div class="empty-state">Belum ada ujian tersimpan.<br>Klik "Buat Link Share" untuk menyimpan ujian ini.</div>';
+    return;
+  }
+  list.innerHTML = savedExams.map((e, i) => `
+    <div class="exam-card">
+      <div class="exam-info">
+        <div class="exam-title">${escapeHtml(e.title)}</div>
+        <div class="exam-meta">${escapeHtml(e.typeLabel)} · ${escapeHtml(e.subject||'-')} · ${e.questions.length} soal · ${e.duration} mnt</div>
+      </div>
+      <button class="exam-action" data-load="${i}" title="Edit">✏️</button>
+      <button class="exam-action share" data-share="${i}" title="Bagikan">🔗</button>
+      <button class="exam-action del" data-delexam="${i}" title="Hapus">✕</button>
+    </div>
+  `).join('');
+  list.querySelectorAll('[data-load]').forEach(b => b.onclick = () => loadExam(+b.dataset.load));
+  list.querySelectorAll('[data-share]').forEach(b => b.onclick = () => shareSavedExam(+b.dataset.share));
+  list.querySelectorAll('[data-delexam]').forEach(b => b.onclick = () => {
+    if (confirm('Hapus ujian tersimpan ini?')) {
+      savedExams.splice(+b.dataset.delexam, 1);
+      saveExams();
+      renderSavedExams();
+      showToast('Ujian dihapus');
+    }
+  });
+}
+
+function loadExam(i) {
+  const e = savedExams[i];
+  if (!e) return;
+  document.getElementById('examTitle').value = e.title;
+  document.getElementById('examType').value = e.type;
+  document.getElementById('examDuration').value = e.duration;
+  document.getElementById('examSubject').value = e.subject || '';
+  document.getElementById('examClass').value = e.class || '';
+  examQuestions = e.questions.map(q => ({...q, id: Date.now() + Math.random()}));
+  renderExamQuestions();
+  showToast('Ujian dimuat');
+  document.getElementById('examTitle').scrollIntoView({behavior:'smooth'});
+}
+
+function shareSavedExam(i) {
+  const e = savedExams[i];
+  if (!e) return;
+  const link = generateShareLink(e);
+  document.getElementById('shareLinkBox').style.display = '';
+  document.getElementById('shareLinkText').value = link;
+  window._currentShareLink = link;
+  window._currentExam = e;
+  document.getElementById('shareLinkBox').scrollIntoView({behavior:'smooth'});
+  showToast('Link dibuat untuk: ' + e.title);
+}
+
+document.getElementById('newExamBtn').onclick = () => {
+  if (examQuestions.length > 0 && !confirm('Mulai ujian baru? Soal yang belum dibagikan akan hilang.')) return;
+  examQuestions = [];
+  document.getElementById('examTitle').value = '';
+  document.getElementById('examDuration').value = '60';
+  document.getElementById('examSubject').value = '';
+  document.getElementById('examClass').value = '';
+  document.getElementById('shareLinkBox').style.display = 'none';
+  window._currentShareLink = null;
+  renderExamQuestions();
+  showToast('Ujian baru dimulai');
+};
+
+/* Render submitted answers */
+function renderSubmittedAnswers() {
+  const list = document.getElementById('submittedAnswers');
+  // Combine answers stored locally (from shareable link viewer) with the submittedAnswers array
+  let allAnswers = [...submittedAnswers];
+  try {
+    const local = JSON.parse(localStorage.getItem('submitted_answers') || '[]');
+    allAnswers = [...allAnswers, ...local];
+  } catch(e) {}
+  // Deduplicate by student name + examId + submittedAt
+  const seen = new Set();
+  allAnswers = allAnswers.filter(a => {
+    const k = (a.student?.name||'') + '|' + (a.examId||'') + '|' + (a.submittedAt||'');
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+
+  if (allAnswers.length === 0) {
+    list.innerHTML = '<div class="empty-state">Belum ada jawaban masuk.<br>Siswa bisa kirim jawaban via link shareable.</div>';
+    return;
+  }
+  list.innerHTML = allAnswers.map((a, i) => {
+    const exam = savedExams.find(e => e.id === a.examId) || a.exam || {};
+    return `
+      <div class="answer-card">
+        <div class="answer-head">
+          <div>
+            <div class="answer-name">${escapeHtml(a.student?.name || 'Anonim')}</div>
+            <div class="answer-date">${new Date(a.submittedAt).toLocaleString('id-ID')}</div>
+          </div>
+          <div class="answer-score">${a.score||0}</div>
+        </div>
+        <div class="answer-exam">📄 ${escapeHtml(a.examTitle || exam.title || 'Ujian')}</div>
+        ${a.student?.class ? `<div class="answer-exam">Kelas: ${escapeHtml(a.student.class)}</div>` : ''}
+        ${a.student?.nis ? `<div class="answer-exam">NIS: ${escapeHtml(a.student.nis)}</div>` : ''}
+        <div class="answer-actions">
+          <button style="background:#1a73e8" data-view="${i}">👁️ Lihat</button>
+          <button style="background:#34a853" data-import="${i}">➕ ke Nilai</button>
+          <button style="background:#ea4335" data-delans="${i}">✕</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  list.querySelectorAll('[data-view]').forEach(b => b.onclick = () => viewAnswer(allAnswers[+b.dataset.view]));
+  list.querySelectorAll('[data-import]').forEach(b => b.onclick = () => importAnswerToScores(allAnswers[+b.dataset.import]));
+  list.querySelectorAll('[data-delans]').forEach(b => b.onclick = () => {
+    if (confirm('Hapus jawaban ini?')) {
+      // Remove from both arrays
+      const idx = +b.dataset.delans;
+      // It might be in submittedAnswers or local submitted_answers
+      // We just clear localStorage's submitted_answers and remove from submittedAnswers
+      const ans = allAnswers[idx];
+      const localIdx = submittedAnswers.findIndex(x =>
+        x.student?.name === ans.student?.name && x.examId === ans.examId && x.submittedAt === ans.submittedAt);
+      if (localIdx >= 0) {
+        submittedAnswers.splice(localIdx, 1);
+        saveAnswers();
+      }
+      // Also clear from localStorage submitted_answers
+      try {
+        const local = JSON.parse(localStorage.getItem('submitted_answers') || '[]');
+        const filtered = local.filter(x =>
+          !(x.student?.name === ans.student?.name && x.examId === ans.examId && x.submittedAt === ans.submittedAt));
+        localStorage.setItem('submitted_answers', JSON.stringify(filtered));
+      } catch(e) {}
+      renderSubmittedAnswers();
+      showToast('Jawaban dihapus');
+    }
+  });
+}
+
+function viewAnswer(a) {
+  const exam = savedExams.find(e => e.id === a.examId) || a.exam || {questions:[]};
+  let html = `📝 ${escapeHtml(a.examTitle || exam.title)}\n`;
+  html += `👤 ${escapeHtml(a.student?.name||'-')} ${a.student?.class ? '(' + escapeHtml(a.student.class) + ')' : ''}\n`;
+  html += `🎯 Skor PG: ${a.score||0}/100\n`;
+  html += `🕐 ${new Date(a.submittedAt).toLocaleString('id-ID')}\n\n`;
+  (exam.questions || []).forEach((q, i) => {
+    html += `Soal ${i+1}: ${q.text}\n`;
+    if (q.type === 'mc') {
+      const ai = a.answers?.[i];
+      const correct = ai === q.correct;
+      html += `  Jawaban: ${ai !== undefined ? String.fromCharCode(65+ai) + '. ' + (q.options[ai]||'') : '(kosong)'} ${correct ? '✓' : '✗'}\n`;
+      html += `  Kunci: ${String.fromCharCode(65+q.correct)}. ${q.options[q.correct]||''}\n`;
+    } else {
+      html += `  Jawaban: ${a.answers?.[i] || '(kosong)'}\n`;
+    }
+    html += '\n';
+  });
+  alert(html);
+}
+
+function importAnswerToScores(a) {
+  const exam = savedExams.find(e => e.id === a.examId) || a.exam || {};
+  students.push({
+    name: a.student?.name || 'Anonim',
+    nis: a.student?.nis || '',
+    assignment: a.examTitle || exam.title || 'Ujian',
+    score: a.score || 0,
+    date: a.submittedAt || new Date().toISOString()
+  });
+  saveStudents();
+  showToast('Nilai siswa ditambahkan ke Penilaian');
+}
+
+/* Export all submitted answers as JSON */
+document.getElementById('exportAnswersBtn').onclick = () => {
+  let allAnswers = [...submittedAnswers];
+  try {
+    const local = JSON.parse(localStorage.getItem('submitted_answers') || '[]');
+    allAnswers = [...allAnswers, ...local];
+  } catch(e) {}
+  if (allAnswers.length === 0) { showToast('Belum ada jawaban'); return; }
+  const blob = new Blob([JSON.stringify(allAnswers, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Jawaban_Siswa_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  showToast('Jawaban diunduh');
+};
+
+/* ===== Exam Viewer Mode (when URL has #exam=...) ===== */
+function checkExamViewerMode() {
+  const hash = location.hash;
+  if (!hash.startsWith('#exam=')) return;
+  const b64 = hash.substring(6);
+  let examData;
+  try {
+    const json = decodeURIComponent(escape(atob(b64)));
+    examData = JSON.parse(json);
+  } catch(e) {
+    document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#ea4335;font-size:16px">❌ Link ujian tidak valid atau rusak.</div>';
+    return;
+  }
+  // Replace the whole page with the exam viewer (full standalone HTML)
+  document.open();
+  document.write(generateStandaloneExamHTML(examData));
+  document.close();
+}
+
+/* Auto-poll for new submitted answers (in case student submits on same device via shared link) */
+setInterval(() => {
+  if (document.getElementById('panel-exam')?.classList.contains('active')) {
+    renderSubmittedAnswers();
+    renderTugasGuru();
+  }
+}, 5000);
+
+/* ========================================================
+   TUGAS & LATIHAN DARI SISWA MODULE (papan-tulis-guru)
+   ======================================================== */
+
+function renderTugasGuru() {
+  const list = document.getElementById('tugasGuruList');
+  let tugasList = [];
+  try {
+    tugasList = JSON.parse(localStorage.getItem('ptg_submitted_tugas') || '[]');
+  } catch(e) {}
+
+  if (tugasList.length === 0) {
+    list.innerHTML = '<div class="empty-state">Belum ada tugas masuk.<br>Siswa bisa kirim tugas lewat portal-siswa.html.</div>';
+    return;
+  }
+
+  // Sort newest first
+  tugasList.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+
+  list.innerHTML = tugasList.map((t, i) => `
+    <div class="tugas-card ${t.status === 'graded' ? 'graded' : ''}" data-ti="${i}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1">
+          <div class="tugas-title">${escapeHtml(t.title || 'Tugas')}</div>
+          <div class="tugas-meta">
+            👤 ${escapeHtml(t.student?.name || 'Anonim')} ${t.student?.nis ? '· NIS ' + escapeHtml(t.student.nis) : ''}<br>
+            🕐 ${new Date(t.submittedAt).toLocaleString('id-ID')}<br>
+            ${t.fileName ? '📎 File tugas: ' + escapeHtml(t.fileName) + ' (' + (t.fileType||'').toUpperCase() + ')' : ''}
+            ${t.answerFileName ? '<br>📎 File jawaban: ' + escapeHtml(t.answerFileName) : ''}
+          </div>
+        </div>
+        <span class="tugas-badge ${t.status === 'graded' ? 'graded' : 'pending'}">${t.status === 'graded' ? '✓ Dinilai' : '⏳ Menunggu'}</span>
+      </div>
+      ${t.answer ? `<div class="tugas-answer">${escapeHtml(t.answer)}</div>` : ''}
+      ${t.status === 'graded' && t.grade ? `<div style="font-size:13px;color:#16a34a;font-weight:700">Nilai: ${t.grade}</div>` : ''}
+      <div class="tugas-actions">
+        ${t.answerFileData ? `<button class="view" data-view-ans="${i}">👁️ Lihat File Jawaban</button>` : ''}
+        ${t.answerFileData ? `<button class="download" data-dl-ans="${i}">⬇ Unduh Jawaban</button>` : ''}
+        <button class="grade" data-grade="${i}">✍️ ${t.status === 'graded' ? 'Ubah Nilai' : 'Beri Nilai'}</button>
+        <button class="del" data-del-tugas="${i}">✕ Hapus</button>
+      </div>
+    </div>
+  `).join('');
+
+  // Attach handlers
+  list.querySelectorAll('[data-view-ans]').forEach(b => b.onclick = () => viewTugasAnswer(tugasList[+b.dataset.viewAns]));
+  list.querySelectorAll('[data-dl-ans]').forEach(b => b.onclick = () => downloadTugasAnswer(tugasList[+b.dataset.dlAns]));
+  list.querySelectorAll('[data-grade]').forEach(b => b.onclick = () => gradeTugas(tugasList[+b.dataset.grade]));
+  list.querySelectorAll('[data-del-tugas]').forEach(b => b.onclick = () => {
+    if (confirm('Hapus tugas ini?')) {
+      const idx = +b.dataset.delTugas;
+      tugasList.splice(idx, 1);
+      localStorage.setItem('ptg_submitted_tugas', JSON.stringify(tugasList));
+      renderTugasGuru();
+      showToast('Tugas dihapus');
+    }
+  });
+}
+
+function viewTugasAnswer(t) {
+  if (!t.answerFileData) {
+    alert('Tidak ada file jawaban untuk ditampilkan');
+    return;
+  }
+  const fileName = t.answerFileName || 'jawaban';
+  const ext = (fileName.split('.').pop() || '').toLowerCase();
+  const fileType = t.answerFileType || '';
+  // Convert base64 dataURL to File/Blob for preview
+  const dataUrl = t.answerFileData;
+  const byteString = atob(dataUrl.split(',')[1]);
+  const mime = dataUrl.substring(dataUrl.indexOf(':') + 1, dataUrl.indexOf(';'));
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+  const blob = new Blob([ab], { type: mime });
+  const file = new File([blob], fileName, { type: mime });
+
+  // Buka window baru untuk preview
+  const w = window.open('', '_blank');
+  if (!w) { alert('Popup diblokir browser. Izinkan popup untuk melihat file.'); return; }
+
+  // Tulis halaman preview + load library yang dibutuhkan
+  const blobUrl = URL.createObjectURL(blob);
+  w.document.write(`<!DOCTYPE html>
+<html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>${escapeHtml(fileName)}</title>
+<style>
+  html,body{margin:0;padding:0;background:#f5f3ff;min-height:100%;font-family:'Segoe UI',system-ui,sans-serif;color:#202124}
+  .header{background:#7c3aed;color:#fff;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .title{font-weight:700;font-size:14px;word-break:break-all}
+  .meta{font-size:11px;opacity:.9;margin-top:2px}
+  .preview{padding:14px;max-width:1000px;margin:0 auto}
+  .footer{padding:10px;text-align:center;font-size:11px;color:#5f6368;background:#fff;border-top:1px solid #e8eaed}
+  .error{padding:30px;text-align:center;color:#dc2626}
+  .loading{padding:40px;text-align:center;color:#5f6368}
+</style>
+</head><body>
+<div class="header">
+  <div>
+    <div class="title">📄 ${escapeHtml(fileName)}</div>
+    <div class="meta">Tipe: ${ext.toUpperCase()} · Ukuran: ${(file.size/1024).toFixed(1)} KB</div>
+  </div>
+  <a href="${blobUrl}" download="${escapeHtml(fileName)}" style="background:#fff;color:#7c3aed;padding:8px 14px;border-radius:8px;text-decoration:none;font-weight:700;font-size:12px">⬇ Unduh</a>
+</div>
+<div class="preview" id="preview"><div class="loading">⏳ Memuat preview...</div></div>
+<div class="footer">© Papan Tulis Digital Guru — Preview File Jawaban Siswa</div>
+<script>
+const FILE_NAME = ${JSON.stringify(fileName)};
+const FILE_EXT = ${JSON.stringify(ext)};
+const FILE_TYPE = ${JSON.stringify(fileType)};
+const FILE_BLOB_URL = ${JSON.stringify(blobUrl)};
+const FILE_SIZE = ${file.size};
+
+async function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Gagal load: ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+async function fetchFile() {
+  const res = await fetch(FILE_BLOB_URL);
+  return await res.blob();
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function renderPreview() {
+  const preview = document.getElementById('preview');
+  try {
+    const blob = await fetchFile();
+    const file = new File([blob], FILE_NAME, { type: blob.type });
+
+    if (FILE_EXT === 'pdf' || blob.type === 'application/pdf') {
+      preview.innerHTML = '<iframe src="' + FILE_BLOB_URL + '" style="width:100%;height:80vh;border:none;border-radius:8px"></iframe>';
+    }
+    else if (FILE_EXT === 'docx' || blob.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      preview.innerHTML = '<div class="loading">⏳ Memuat pemroses Word...</div>';
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
+      const ab = await blob.arrayBuffer();
+      const result = await mammoth.convertToHtml({ arrayBuffer: ab });
+      preview.innerHTML = '<div style="background:#fff;padding:24px;border-radius:8px;font-size:14px;line-height:1.7">' + (result.value || '<i>(File kosong)</i>') + '</div>';
+    }
+    else if (FILE_EXT === 'xlsx' || FILE_EXT === 'xls' ||
+             blob.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+             blob.type === 'application/vnd.ms-excel') {
+      preview.innerHTML = '<div class="loading">⏳ Memuat pemroses Excel...</div>';
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+      const ab = await blob.arrayBuffer();
+      const wb = XLSX.read(ab, { type: 'array' });
+      let html = '';
+      wb.SheetNames.forEach((sn, i) => {
+        const sheet = wb.Sheets[sn];
+        const tbl = XLSX.utils.sheet_to_html(sheet, { id: 's' + i });
+        html += '<div style="margin-bottom:14px"><div style="background:#7c3aed;color:#fff;padding:6px 12px;border-radius:6px 6px 0 0;font-size:12px;font-weight:700">📊 ' + escHtml(sn) + '</div><div style="overflow-x:auto;border:1px solid #e8eaed;border-top:none;border-radius:0 0 6px 6px;background:#fff">' + tbl + '</div></div>';
+      });
+      preview.innerHTML = '<div style="max-height:none">' + (html || '<i>(File kosong)</i>') + '</div>';
+      preview.querySelectorAll('table').forEach(t => {
+        t.style.borderCollapse = 'collapse'; t.style.width = '100%';
+        t.querySelectorAll('td, th').forEach(c => {
+          c.style.border = '1px solid #e8eaed'; c.style.padding = '4px 8px'; c.style.fontSize = '12px';
+        });
+      });
+    }
+    else if (FILE_EXT === 'pptx' || blob.type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
+      preview.innerHTML = '<div class="loading">⏳ Memuat pemroses PowerPoint...</div>';
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+      const ab = await blob.arrayBuffer();
+      const zip = await JSZip.loadAsync(ab);
+      const slideFiles = Object.keys(zip.files).filter(n => /ppt\\/slides\\/slide\\d+\\.xml$/.test(n)).sort();
+      let html = '';
+      for (let i = 0; i < slideFiles.length; i++) {
+        const content = await zip.files[slideFiles[i]].async('string');
+        const texts = content.match(/<a:t>([^<]*)<\\/a:t>/g) || [];
+        const text = texts.map(t => t.replace(/<\\/?a:t>/g, '')).join(' ');
+        html += '<div style="background:#fff;border:1px solid #e8eaed;border-radius:8px;padding:14px;margin-bottom:10px"><div style="background:#7c3aed;color:#fff;padding:4px 10px;border-radius:6px;display:inline-block;font-size:11px;font-weight:700;margin-bottom:8px">Slide ' + (i+1) + '</div><div style="font-size:14px;line-height:1.5;white-space:pre-wrap">' + escHtml(text) + '</div></div>';
+      }
+      preview.innerHTML = html || '<i>(File kosong)</i>';
+    }
+    else if (blob.type.startsWith('image/')) {
+      preview.innerHTML = '<div style="text-align:center"><img src="' + FILE_BLOB_URL + '" style="max-width:100%;max-height:80vh;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1)"></div>';
+    }
+    else if (FILE_EXT === 'txt' || FILE_EXT === 'csv' || FILE_EXT === 'md' || FILE_EXT === 'json' || FILE_EXT === 'js' || FILE_EXT === 'html' || FILE_EXT === 'css' || blob.type.startsWith('text/') || blob.type === 'application/json') {
+      const text = await blob.text();
+      preview.innerHTML = '<pre style="background:#fff;padding:14px;border-radius:8px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;overflow-x:auto">' + escHtml(text) + '</pre>';
+    }
+    else if (blob.type.startsWith('audio/') || blob.type.startsWith('video/')) {
+      const tag = blob.type.startsWith('audio/') ? 'audio' : 'video';
+      preview.innerHTML = '<' + tag + ' src="' + FILE_BLOB_URL + '" controls style="width:100%;max-height:80vh"></' + tag + '>';
+    }
+    else if (FILE_EXT === 'doc' || blob.type === 'application/msword') {
+      preview.innerHTML = '<div class="loading">⏳ Membaca file .doc lama...</div>';
+      try {
+        const ab = await blob.arrayBuffer();
+        const bytes = new Uint8Array(ab);
+        let text = '';
+        for (let i = 0; i < bytes.length; i++) {
+          const c = bytes[i];
+          if (c >= 32 && c <= 126 || c === 10 || c === 13 || c === 9) text += String.fromCharCode(c);
+        }
+        const cleanText = text.replace(/[^\\x20-\\x7E\\n\\r\\t]/g, ' ').replace(/\\s+/g, ' ').trim();
+        if (cleanText.length > 100) {
+          preview.innerHTML = '<pre style="background:#fff;padding:14px;border-radius:8px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word">' + escHtml(cleanText.substring(0, 50000)) + '</pre><div style="padding:8px;font-size:11px;color:#ca8a04;text-align:center">⚠️ Format .doc lama — tampilan mungkin tidak sempurna.</div>';
+        } else {
+          preview.innerHTML = '<div class="error"><i>Tidak dapat mengekstrak teks dari file .doc ini. Silakan konversi ke .docx atau .pdf.</i></div>';
+        }
+      } catch(err) {
+        preview.innerHTML = '<div class="error">Gagal membaca file .doc.</div>';
+      }
+    }
+    else {
+      // Fallback — try as text, else show download link
+      try {
+        const text = await blob.text();
+        if (text && text.length > 0 && /^[\\x20-\\x7E\\s]+$/.test(text.substring(0, 100))) {
+          preview.innerHTML = '<pre style="background:#fff;padding:14px;border-radius:8px;font-size:13px;white-space:pre-wrap;word-break:break-word">' + escHtml(text.substring(0, 50000)) + '</pre>';
+        } else {
+          throw new Error('binary');
+        }
+      } catch(err) {
+        preview.innerHTML = '<div style="padding:30px;text-align:center"><div style="font-size:48px;margin-bottom:10px">📄</div><div style="font-weight:700;margin-bottom:6px">' + escHtml(FILE_NAME) + '</div><div style="font-size:12px;color:#5f6368;margin-bottom:14px">Format: ' + FILE_EXT.toUpperCase() + ' · ' + (FILE_SIZE/1024).toFixed(1) + ' KB</div><div style="background:#fef7e0;padding:10px;border-radius:8px;font-size:12px;color:#ca8a04;margin-bottom:14px">⚠️ Format .' + FILE_EXT + ' tidak bisa ditampilkan langsung. Klik tombol "Unduh" di atas untuk membuka file ini.</div></div>';
+      }
+    }
+  } catch(err) {
+    console.error(err);
+    preview.innerHTML = '<div class="error">❌ Gagal membaca file: ' + escHtml(err.message) + '</div>';
+  }
+}
+
+renderPreview();
+<\/script>
+</body></html>`);
+  w.document.close();
+}
+
+function downloadTugasAnswer(t) {
+  if (!t.answerFileData) return;
+  const a = document.createElement('a');
+  a.href = t.answerFileData;
+  a.download = t.answerFileName || 'jawaban';
+  a.click();
+  showToast('File diunduh');
+}
+
+function gradeTugas(t) {
+  const gradeStr = prompt(`Beri nilai untuk tugas "${t.title}" oleh ${t.student?.name}\n(Kosongkan untuk hapus nilai, angka 0-100)`, t.grade || '');
+  if (gradeStr === null) return;
+  const grade = gradeStr.trim() === '' ? null : +gradeStr;
+  if (grade !== null && (isNaN(grade) || grade < 0 || grade > 100)) {
+    showToast('Nilai harus 0-100'); return;
+  }
+
+  // Update in localStorage
+  let tugasList = [];
+  try { tugasList = JSON.parse(localStorage.getItem('ptg_submitted_tugas') || '[]'); } catch(e) {}
+  const idx = tugasList.findIndex(x => x.id === t.id);
+  if (idx >= 0) {
+    tugasList[idx].grade = grade;
+    tugasList[idx].status = grade !== null ? 'graded' : 'pending';
+    if (grade !== null) {
+      tugasList[idx].gradedAt = new Date().toISOString();
+    }
+    localStorage.setItem('ptg_submitted_tugas', JSON.stringify(tugasList));
+
+    // If grade is set, also add to students array (penilaian siswa)
+    if (grade !== null) {
+      // Check if not already added (avoid duplicate)
+      const existing = students.findIndex(s =>
+        s.name?.toLowerCase().trim() === t.student?.name?.toLowerCase().trim() &&
+        s.assignment === t.title &&
+        Math.abs(new Date(s.date).getTime() - new Date(t.submittedAt).getTime()) < 60000);
+      if (existing < 0) {
+        students.push({
+          name: t.student?.name || 'Anonim',
+          nis: t.student?.nis || '',
+          assignment: t.title,
+          score: grade,
+          date: t.submittedAt
+        });
+        saveStudents();
+        showToast(`Nilai ${grade} tersimpan & ditambahkan ke Penilaian Siswa`);
+      } else {
+        // Update existing
+        students[existing].score = grade;
+        saveStudents();
+        showToast(`Nilai ${grade} diperbarui di Penilaian Siswa`);
+      }
+    } else {
+      // Remove from students if ungraded
+      const existing = students.findIndex(s =>
+        s.name?.toLowerCase().trim() === t.student?.name?.toLowerCase().trim() &&
+        s.assignment === t.title);
+      if (existing >= 0) {
+        students.splice(existing, 1);
+        saveStudents();
+      }
+      showToast('Nilai dihapus');
+    }
+    renderTugasGuru();
+  }
+}
+
+/* Refresh button */
+document.getElementById('refreshTugasGuruBtn').onclick = () => {
+  renderTugasGuru();
+  showToast('Daftar tugas direfresh');
+};
+
+/* Export all tugas as JSON */
+document.getElementById('exportTugasGuruBtn').onclick = () => {
+  let tugasList = [];
+  try { tugasList = JSON.parse(localStorage.getItem('ptg_submitted_tugas') || '[]'); } catch(e) {}
+  if (tugasList.length === 0) { showToast('Belum ada tugas'); return; }
+  const blob = new Blob([JSON.stringify(tugasList, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Tugas_Siswa_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  showToast('Tugas diunduh');
+};
+
+/* Import tugas from JSON (untuk perangkat berbeda) */
+document.getElementById('importTugasGuruBtn').onclick = () => {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json';
+  inp.onchange = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const data = JSON.parse(r.result);
+        if (Array.isArray(data)) {
+          // Merge with existing (avoid duplicate by id)
+          let existing = [];
+          try { existing = JSON.parse(localStorage.getItem('ptg_submitted_tugas') || '[]'); } catch(e) {}
+          const existingIds = new Set(existing.map(t => t.id));
+          const newOnes = data.filter(t => !existingIds.has(t.id));
+          existing.push(...newOnes);
+          localStorage.setItem('ptg_submitted_tugas', JSON.stringify(existing));
+          renderTugasGuru();
+          showToast(newOnes.length + ' tugas baru diimpor');
+        } else {
+          showToast('Format file tidak valid');
+        }
+      } catch(err) {
+        showToast('Gagal membaca file');
+      }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+};
+
+/* ===== Init ===== */
+renderStudents();
+// Check if we're in exam viewer mode
+checkExamViewerMode();
+
+document.addEventListener('contextmenu', e => e.preventDefault());
+</script>
+</body>
+</html>

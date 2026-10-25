@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#7c3aed">
+<title>Portal Siswa - Nilai & Ujian</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; font-family: 'Roboto', 'Segoe UI', system-ui, sans-serif; }
+  body {
+    background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%);
+    display: flex; flex-direction: column;
+    color: #202124; user-select: none;
+  }
+
+  /* ===== Android Status Bar (purple) ===== */
+  .status-bar {
+    background: #7c3aed; color: #fff;
+    padding: 4px 14px; display: flex;
+    justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 500;
+    flex-shrink: 0; z-index: 10;
+  }
+  .status-left { display: flex; gap: 12px; align-items: center; }
+  .status-left .clock { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .status-right { display: flex; gap: 10px; align-items: center; font-size: 12px; opacity: .95; }
+  .battery { display: inline-flex; align-items: center; gap: 3px; }
+  .battery-icon { width: 18px; height: 10px; border: 1.5px solid #fff; border-radius: 2px; position: relative; padding: 1px; }
+  .battery-icon::after { content: ''; position: absolute; right: -3px; top: 2px; width: 2px; height: 4px; background: #fff; border-radius: 0 1px 1px 0; }
+  .battery-level { height: 100%; background: #fff; border-radius: 1px; width: 75%; }
+
+  /* ===== App Header ===== */
+  .app-header {
+    background: #fff; padding: 8px 14px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.08);
+    display: flex; justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  .app-title { font-size: 16px; font-weight: 700; color: #7c3aed; }
+  .app-subtitle { font-size: 11px; color: #5f6368; }
+  .header-actions { display: flex; gap: 6px; align-items: center; }
+  .icon-btn {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: none; cursor: pointer; background: #f1f3f4;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .icon-btn:active { transform: scale(.92); }
+  .user-chip {
+    background: #ede9fe; color: #7c3aed;
+    padding: 4px 10px; border-radius: 14px;
+    font-size: 12px; font-weight: 600;
+    max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* ===== Login Screen ===== */
+  .login-screen {
+    position: absolute; inset: 0; background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 30px 20px; z-index: 100; color: #fff;
+  }
+  .login-logo {
+    width: 80px; height: 80px; border-radius: 24px;
+    background: rgba(255,255,255,.15); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 42px; margin-bottom: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.2);
+  }
+  .login-title { font-size: 24px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+  .login-subtitle { font-size: 13px; opacity: .85; text-align: center; margin-bottom: 30px; }
+  .login-form {
+    background: rgba(255,255,255,.95); border-radius: 16px;
+    padding: 20px; width: 100%; max-width: 360px;
+    display: flex; flex-direction: column; gap: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.25);
+  }
+  .login-input {
+    border: 1.5px solid #e8eaed; border-radius: 12px;
+    padding: 12px 16px; font-size: 15px; outline: none;
+    background: #fff; color: #202124;
+  }
+  .login-input:focus { border-color: #7c3aed; }
+  .login-input::placeholder { color: #9aa0a6; }
+  .login-btn {
+    background: #7c3aed; color: #fff; border: none;
+    padding: 14px; border-radius: 12px;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    margin-top: 6px;
+  }
+  .login-btn:active { transform: scale(.97); }
+  .login-import {
+    background: transparent; color: #7c3aed; border: 1.5px dashed #7c3aed;
+    padding: 10px; border-radius: 10px; font-size: 12px;
+    font-weight: 600; cursor: pointer;
+    margin-top: 6px;
+  }
+  .login-hint {
+    font-size: 11px; text-align: center; color: #5f6368; margin-top: 4px;
+  }
+  .login-error {
+    background: #fce8e6; color: #c5221f; padding: 8px 12px;
+    border-radius: 8px; font-size: 12px; text-align: center;
+    display: none;
+  }
+  .login-error.show { display: block; }
+
+  /* ===== Tabs ===== */
+  .tabs {
+    display: flex; background: #fff;
+    border-bottom: 1px solid #e8eaed; flex-shrink: 0;
+    overflow-x: auto;
+  }
+  .tab {
+    flex: 1; padding: 10px 6px; text-align: center;
+    font-size: 12px; font-weight: 500; color: #5f6368;
+    cursor: pointer; border-bottom: 2px solid transparent;
+    transition: all .2s; white-space: nowrap; min-width: 80px;
+  }
+  .tab.active { color: #7c3aed; border-bottom-color: #7c3aed; }
+  .tab:active { background: #f1f3f4; }
+
+  /* ===== Content ===== */
+  .content { flex: 1; overflow: hidden; position: relative; }
+  .panel { position: absolute; inset: 0; display: none; flex-direction: column; }
+  .panel.active { display: flex; }
+  .panel-scroll {
+    flex: 1; overflow-y: auto; padding: 14px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+
+  /* ===== Home / Dashboard ===== */
+  .welcome-card {
+    background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%);
+    color: #fff; padding: 18px; border-radius: 16px;
+    box-shadow: 0 6px 20px rgba(124,58,237,.25);
+  }
+  .welcome-hi { font-size: 14px; opacity: .9; }
+  .welcome-name { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .welcome-meta { font-size: 12px; opacity: .8; margin-top: 8px; }
+  .welcome-stats {
+    display: flex; justify-content: space-around;
+    margin-top: 14px; padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,.2);
+  }
+  .ws-item { text-align: center; }
+  .ws-val { font-size: 20px; font-weight: 700; }
+  .ws-label { font-size: 10px; opacity: .8; }
+
+  .menu-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  }
+  .menu-card {
+    background: #fff; padding: 18px 14px; border-radius: 14px;
+    text-align: center; cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    transition: all .15s; border: 2px solid transparent;
+  }
+  .menu-card:active { transform: scale(.97); border-color: #7c3aed; }
+  .menu-icon {
+    width: 56px; height: 56px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin: 0 auto 8px;
+  }
+  .menu-icon.purple { background: #ede9fe; }
+  .menu-icon.green { background: #dcfce7; }
+  .menu-icon.blue { background: #dbeafe; }
+  .menu-icon.orange { background: #fed7aa; }
+  .menu-title { font-size: 14px; font-weight: 600; color: #202124; }
+  .menu-sub { font-size: 11px; color: #5f6368; margin-top: 2px; }
+
+  /* ===== Score Cards (Nilai page) ===== */
+  .stats-bar {
+    background: #fff; border-radius: 12px; padding: 12px 14px;
+    display: flex; justify-content: space-around;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08); font-size: 13px;
+  }
+  .stat-item { text-align: center; }
+  .stat-val { font-size: 18px; font-weight: 700; color: #7c3aed; display: block; }
+  .stat-label { color: #5f6368; font-size: 11px; }
+
+  .score-card {
+    background: #fff; border-radius: 12px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.06);
+    border-left: 4px solid #7c3aed;
+  }
+  .score-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: #ede9fe; color: #7c3aed;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px; flex-shrink: 0;
+  }
+  .score-info { flex: 1; min-width: 0; }
+  .score-name { font-weight: 600; font-size: 14px; color: #202124;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .score-meta { font-size: 11px; color: #5f6368; margin-top: 2px; }
+  .score-val {
+    font-size: 22px; font-weight: 700;
+    padding: 4px 14px; border-radius: 10px;
+    min-width: 56px; text-align: center;
+  }
+  .score-val.high { color: #16a34a; background: #dcfce7; }
+  .score-val.mid { color: #ca8a04; background: #fef9c3; }
+  .score-val.low { color: #dc2626; background: #fee2e2; }
+
+  /* ===== Raport ===== */
+  .raport-card {
+    background: #fff; border-radius: 14px; padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08); overflow: hidden;
+  }
+  .raport-header {
+    text-align: center; border-bottom: 2px solid #7c3aed;
+    padding-bottom: 10px; margin-bottom: 12px;
+  }
+  .raport-school { font-size: 16px; font-weight: 700; color: #7c3aed; }
+  .raport-title { font-size: 13px; color: #5f6368; margin-top: 4px; }
+  .raport-id {
+    background: #ede9fe; padding: 10px; border-radius: 10px;
+    display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+  }
+  .raport-avatar {
+    width: 50px; height: 50px; border-radius: 50%;
+    background: #7c3aed; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 20px; flex-shrink: 0;
+  }
+  .raport-id-info { flex: 1; }
+  .raport-id-name { font-size: 16px; font-weight: 700; }
+  .raport-id-meta { font-size: 11px; color: #5f6368; margin-top: 2px; }
+  .raport-table {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+  }
+  .raport-table th, .raport-table td {
+    border: 1px solid #e8eaed; padding: 8px 6px;
+  }
+  .raport-table th {
+    background: #7c3aed; color: #fff; text-align: left;
+  }
+  .raport-table td.center { text-align: center; }
+  .raport-summary {
+    background: #ede9fe; padding: 10px; border-radius: 8px;
+    margin-top: 12px; font-size: 12px;
+  }
+  .raport-print-btn {
+    background: #7c3aed; color: #fff; border: none;
+    padding: 12px; border-radius: 10px; font-size: 14px;
+    font-weight: 700; cursor: pointer; margin-top: 10px;
+    width: 100%;
+  }
+
+  /* ===== Exam List ===== */
+  .exam-item {
+    background: #fff; border-radius: 12px; padding: 14px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.06);
+    border-left: 4px solid #7c3aed;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .exam-item.done { border-left-color: #16a34a; opacity: .85; }
+  .exam-item-title { font-weight: 700; font-size: 15px; color: #202124; }
+  .exam-item-meta { font-size: 12px; color: #5f6368; }
+  .exam-item-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 12px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+  }
+  .badge-open { background: #dcfce7; color: #16a34a; }
+  .badge-done { background: #dbeafe; color: #1d4ed8; }
+  .exam-start-btn {
+    background: #7c3aed; color: #fff; border: none;
+    padding: 10px; border-radius: 10px; font-size: 13px;
+    font-weight: 700; cursor: pointer; margin-top: 6px;
+  }
+  .exam-start-btn:active { transform: scale(.97); }
+  .exam-start-btn.done { background: #16a34a; }
+
+  .empty-state {
+    text-align: center; padding: 40px 20px; color: #9aa0a6;
+    font-size: 13px;
+  }
+
+  /* ===== Toast ===== */
+  .toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: #323232; color: #fff; padding: 10px 20px;
+    border-radius: 24px; font-size: 13px; opacity: 0;
+    transition: opacity .3s, transform .3s; z-index: 100;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, -8px); }
+
+  /* ===== Bottom Nav ===== */
+  .bottom-nav {
+    background: #fff; border-top: 1px solid #e8eaed;
+    display: flex; padding: 4px 0; flex-shrink: 0;
+  }
+  .nav-btn {
+    flex: 1; background: none; border: none;
+    padding: 6px 4px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 2px; color: #5f6368; font-size: 10px; font-weight: 500;
+  }
+  .nav-btn.active { color: #7c3aed; }
+  .nav-icon { font-size: 18px; }
+
+  @media (min-width: 768px) {
+    .app-header, .tabs, .bottom-nav, .panel-scroll, .login-form {
+      max-width: 720px; margin-left: auto; margin-right: auto; width: 100%;
+    }
+    .login-screen { background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 50%, #7c3aed 100%); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Status Bar ===== -->
+<div class="status-bar">
+  <div class="status-left">
+    <span class="clock" id="clock">00:00</span>
+    <span id="dayName">Hari</span>
+  </div>
+  <div class="status-right">
+    <span id="fullDate">Tanggal</span>
+    <span class="battery">
+      <span class="battery-icon"><span class="battery-level" id="batteryLevel"></span></span>
+      <span id="batteryPct">75%</span>
+    </span>
+  </div>
+</div>
+
+<!-- ===== App Header ===== -->
+<div class="app-header" id="appHeader" style="display:none">
+  <div>
+    <div class="app-title">🎓 Portal Siswa</div>
+    <div class="app-subtitle" id="headerSubtitle">Sekolah</div>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" id="importBtn" title="Import Data">📥</button>
+    <button class="icon-btn" id="logoutBtn" title="Keluar">🚪</button>
+  </div>
+</div>
+
+<!-- ===== Login Screen ===== -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-logo">🎓</div>
+  <div class="login-title">Portal Siswa</div>
+  <div class="login-subtitle">Lihat nilai, raport, dan kerjakan ujian</div>
+  <div class="login-form">
+    <div class="login-error" id="loginError"></div>
+    <input type="text" class="login-input" id="loginName" placeholder="Nama Lengkap Siswa">
+    <input type="text" class="login-input" id="loginNis" placeholder="NIS / NISN (jika ada)">
+    <button class="login-btn" id="loginBtn">Masuk →</button>
+    <button class="login-import" id="importBtnLogin">📥 Impor Data dari Guru</button>
+    <div class="login-hint">
+      💡 Masukkan nama persis seperti yang didaftarkan guru.<br>
+      Atau import file JSON yang dibagikan guru untuk melihat nilai & raport.
+    </div>
+  </div>
+</div>
+
+<!-- ===== Tabs ===== -->
+<div class="tabs" id="tabsBar" style="display:none">
+  <div class="tab active" data-tab="home">🏠 Beranda</div>
+  <div class="tab" data-tab="nilai">📊 Nilai</div>
+  <div class="tab" data-tab="raport">📄 Raport</div>
+  <div class="tab" data-tab="ujian">📝 Ujian</div>
+  <div class="tab" data-tab="latihan">📚 Latihan</div>
+</div>
+
+<!-- ===== Content ===== -->
+<div class="content" id="content" style="display:none">
+
+  <!-- Panel Home -->
+  <div class="panel active" id="panel-home">
+    <div class="panel-scroll">
+      <div class="welcome-card">
+        <div class="welcome-hi">Selamat datang,</div>
+        <div class="welcome-name" id="welcomeName">Siswa</div>
+        <div class="welcome-meta" id="welcomeMeta">Kelas - · NIS -</div>
+        <div class="welcome-stats">
+          <div class="ws-item"><div class="ws-val" id="homeTotalNilai">0</div><div class="ws-label">Nilai</div></div>
+          <div class="ws-item"><div class="ws-val" id="homeAvg">0</div><div class="ws-label">Rata-rata</div></div>
+          <div class="ws-item"><div class="ws-val" id="homeExams">0</div><div class="ws-label">Ujian</div></div>
+        </div>
+      </div>
+
+      <div class="menu-grid">
+        <div class="menu-card" data-tab="nilai">
+          <div class="menu-icon purple">📊</div>
+          <div class="menu-title">Lihat Nilai</div>
+          <div class="menu-sub">Semua penilaian</div>
+        </div>
+        <div class="menu-card" data-tab="raport">
+          <div class="menu-icon green">📄</div>
+          <div class="menu-title">Raport Saya</div>
+          <div class="menu-sub">Cetak raport</div>
+        </div>
+        <div class="menu-card" data-tab="ujian">
+          <div class="menu-icon blue">📝</div>
+          <div class="menu-title">Kerjakan Ujian</div>
+          <div class="menu-sub" id="homeExamsAvail">0 ujian tersedia</div>
+        </div>
+        <div class="menu-card" data-tab="latihan">
+          <div class="menu-icon orange">📚</div>
+          <div class="menu-title">Latihan & Tugas</div>
+          <div class="menu-sub">Buka file & kirim</div>
+        </div>
+        <div class="menu-card" id="menuImport">
+          <div class="menu-icon purple">📥</div>
+          <div class="menu-title">Import Data</div>
+          <div class="menu-sub">Dari file guru</div>
+        </div>
+      </div>
+
+      <div style="background:#fff;padding:14px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+        <div style="font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:8px">ℹ️ Informasi</div>
+        <div style="font-size:12px;color:#5f6368;line-height:1.6" id="infoText">
+          Selamat datang di Portal Siswa. Anda bisa melihat semua nilai yang sudah diinput oleh guru, mencetak raport resmi, dan mengerjakan ujian yang dibagikan guru.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel Nilai -->
+  <div class="panel" id="panel-nilai">
+    <div class="panel-scroll">
+      <div class="stats-bar">
+        <div class="stat-item"><span class="stat-val" id="nilaiTotal">0</span><span class="stat-label">Penilaian</span></div>
+        <div class="stat-item"><span class="stat-val" id="nilaiAvg">0</span><span class="stat-label">Rata-rata</span></div>
+        <div class="stat-item"><span class="stat-val" id="nilaiHigh">0</span><span class="stat-label">Tertinggi</span></div>
+        <div class="stat-item"><span class="stat-val" id="nilaiLow">0</span><span class="stat-label">Terendah</span></div>
+      </div>
+      <div id="nilaiList"></div>
+    </div>
+  </div>
+
+  <!-- Panel Raport -->
+  <div class="panel" id="panel-raport">
+    <div class="panel-scroll">
+      <div class="raport-card" id="raportCard">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel Ujian -->
+  <div class="panel" id="panel-ujian">
+    <div class="panel-scroll">
+      <div style="font-size:13px;color:#5f6368;background:#ede9fe;padding:10px 14px;border-radius:10px">
+        📝 Daftar ujian yang dibagikan guru. Klik "Mulai Kerjakan" untuk memulai. Waktu berjalan otomatis.
+      </div>
+      <div id="ujianList"></div>
+    </div>
+  </div>
+
+  <!-- Panel Latihan / Tugas -->
+  <div class="panel" id="panel-latihan">
+    <div class="panel-scroll">
+      <div style="font-size:13px;color:#5f6368;background:#ede9fe;padding:10px 14px;border-radius:10px">
+        📚 Buka file tugas dari guru (PDF/Word/Excel) langsung di sini tanpa download. Kerjakan, lalu kumpulkan — otomatis masuk ke aplikasi guru.
+      </div>
+
+      <!-- Upload File Tugas -->
+      <div class="raport-card">
+        <div style="font-size:14px;font-weight:700;color:#7c3aed;margin-bottom:10px">📂 Buka File Tugas dari Guru</div>
+        <div style="font-size:12px;color:#5f6368;margin-bottom:10px">
+          Format yang didukung: <b>PDF, DOC, DOCX (Word), XLS, XLSX (Excel), TXT, PPT, PPTX (PowerPoint), gambar (JPG/PNG/GIF)</b>. File dibuka langsung di browser — tidak perlu download.
+        </div>
+        <input type="file" id="tugasFileInput" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+        <label for="tugasFileInput" class="raport-print-btn" style="background:#7c3aed;display:block;text-align:center;cursor:pointer;padding:14px">📁 Pilih File Tugas</label>
+        <div id="tugasFileInfo" style="display:none;margin-top:10px"></div>
+      </div>
+
+      <!-- File Preview -->
+      <div class="raport-card" id="tugasPreviewCard" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:14px;font-weight:700;color:#7c3aed">👁️ Preview File</div>
+          <button class="icon-btn" id="closePreviewBtn" title="Tutup">✕</button>
+        </div>
+        <div id="tugasPreview" style="border:1px solid #e8eaed;border-radius:8px;overflow:hidden;background:#fff;min-height:60px"></div>
+      </div>
+
+      <!-- Form Jawaban Tugas -->
+      <div class="raport-card" id="tugasAnswerCard" style="display:none">
+        <div style="font-size:14px;font-weight:700;color:#7c3aed;margin-bottom:10px">✍️ Kerjakan Tugas</div>
+        <input type="text" id="tugasTitle" placeholder="Judul Tugas (cth: Latihan Bab 3)" style="width:100%;padding:10px;border:1px solid #dadce0;border-radius:8px;font-size:14px;margin-bottom:8px;outline:none">
+        <textarea id="tugasAnswer" placeholder="Tulis jawaban / kerja tugas Anda di sini..." style="width:100%;min-height:180px;padding:10px;border:1px solid #dadce0;border-radius:8px;font-size:14px;font-family:inherit;outline:none;resize:vertical"></textarea>
+        <div style="font-size:11px;color:#5f6368;margin:6px 0">
+          💡 Atau upload file jawaban (foto jawaban, dokumen, dll):
+        </div>
+        <input type="file" id="tugasAnswerFile" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+        <label for="tugasAnswerFile" class="raport-print-btn" style="background:#fff;color:#7c3aed;border:1.5px dashed #7c3aed;margin-bottom:10px;display:block;text-align:center;cursor:pointer;padding:14px">📎 Lampirkan File Jawaban</label>
+        <div id="answerFileName" style="font-size:11px;color:#16a34a;margin-top:-6px;margin-bottom:10px"></div>
+        <button class="raport-print-btn" id="submitTugasBtn" style="background:#16a34a">📤 Kumpulkan Tugas ke Guru</button>
+      </div>
+
+      <!-- Daftar Tugas yang Dikumpulkan -->
+      <div class="raport-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:14px;font-weight:700;color:#7c3aed">📋 Tugas Saya</div>
+          <button class="icon-btn" id="refreshTugasBtn" title="Refresh">🔄</button>
+        </div>
+        <div id="tugasSubmittedList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Bottom Nav ===== -->
+<div class="bottom-nav" id="bottomNav" style="display:none">
+  <button class="nav-btn active" data-tab="home"><span class="nav-icon">🏠</span>Beranda</button>
+  <button class="nav-btn" data-tab="nilai"><span class="nav-icon">📊</span>Nilai</button>
+  <button class="nav-btn" data-tab="raport"><span class="nav-icon">📄</span>Raport</button>
+  <button class="nav-btn" data-tab="ujian"><span class="nav-icon">📝</span>Ujian</button>
+  <button class="nav-btn" data-tab="latihan"><span class="nav-icon">📚</span>Latihan</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ========================================================
+   PORTAL SISWA - JavaScript
+   ======================================================== */
+
+const HARI_ID = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const BULAN_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+/* ===== Status Bar ===== */
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('clock').textContent = `${h}:${m}`;
+  document.getElementById('dayName').textContent = HARI_ID[now.getDay()];
+  document.getElementById('fullDate').textContent =
+    `${now.getDate()} ${BULAN_ID[now.getMonth()]} ${now.getFullYear()}`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+/* ===== Battery ===== */
+if (navigator.getBattery) {
+  navigator.getBattery().then(b => {
+    const update = () => {
+      const pct = Math.round(b.level * 100);
+      document.getElementById('batteryLevel').style.width = pct + '%';
+      document.getElementById('batteryPct').textContent = pct + '%';
+    };
+    update();
+    b.addEventListener('levelchange', update);
+  });
+} else {
+  document.getElementById('batteryPct').textContent = '75%';
+  document.getElementById('batteryLevel').style.width = '75%';
+}
+
+/* ===== Data Storage ===== */
+/* Data guru disimpan di localStorage dengan prefix ptg_. Portal siswa bisa baca
+   jika di-perangkat-yang-sama, atau via import JSON */
+let portalStudents = [];   // dari ptg_students atau import
+let portalExams = [];      // dari ptg_exams atau import
+let portalMeta = {         // meta info dari guru
+  school: '',
+  semester: '',
+  teacher: ''
+};
+let currentStudent = null; // siswa yang login
+
+/* Load data dari localStorage jika ada (same device as guru) */
+function loadDataFromLocalStorage() {
+  try {
+    portalStudents = JSON.parse(localStorage.getItem('ptg_students') || '[]');
+    portalExams = JSON.parse(localStorage.getItem('ptg_exams') || '[]');
+    portalMeta.school = localStorage.getItem('ptg_reportSchool') || '';
+    portalMeta.semester = localStorage.getItem('ptg_reportSemester') || '';
+    portalMeta.teacher = localStorage.getItem('ptg_teacherInput') || '';
+  } catch(e) {
+    console.warn('Failed to load from localStorage', e);
+  }
+}
+loadDataFromLocalStorage();
+
+/* ===== Auto-login jika sudah ada session ===== */
+function tryAutoLogin() {
+  const saved = localStorage.getItem('portal_siswa_session');
+  if (!saved) return;
+  try {
+    const sess = JSON.parse(saved);
+    if (sess.name) {
+      document.getElementById('loginName').value = sess.name;
+      document.getElementById('loginNis').value = sess.nis || '';
+      // Auto-submit
+      setTimeout(() => doLogin(true), 300);
+    }
+  } catch(e) {}
+}
+tryAutoLogin();
+
+/* ===== Login ===== */
+function doLogin(silent) {
+  const name = document.getElementById('loginName').value.trim();
+  const nis = document.getElementById('loginNis').value.trim();
+  if (!name) {
+    showError('Isi nama lengkap dulu');
+    return;
+  }
+  // Cari siswa di portalStudents (harus match nama)
+  // Match: nama lowercase sama, NIS jika diisi harus match
+  const matches = portalStudents.filter(s => {
+    if (s.name.toLowerCase().trim() !== name.toLowerCase().trim()) return false;
+    if (nis && s.nis && s.nis !== nis) return false;
+    return true;
+  });
+
+  currentStudent = {
+    name: name,
+    nis: nis,
+    hasData: matches.length > 0,
+    scores: matches
+  };
+
+  // Simpan session
+  localStorage.setItem('portal_siswa_session', JSON.stringify({ name, nis }));
+
+  // Tampilkan app
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appHeader').style.display = 'flex';
+  document.getElementById('tabsBar').style.display = 'flex';
+  document.getElementById('content').style.display = 'block';
+  document.getElementById('bottomNav').style.display = 'flex';
+
+  // Update header
+  const initials = name.trim().split(/\s+/).slice(0,2).map(w => w[0]||'').join('').toUpperCase();
+  document.getElementById('headerSubtitle').textContent = (matches.length ? portalMeta.school : 'Mode Tamu') + ' · ' + name;
+
+  renderAll();
+  if (!silent) showToast(matches.length ? 'Berhasil masuk' : 'Masuk sebagai tamu. Import data dari guru untuk lihat nilai.');
+}
+
+document.getElementById('loginBtn').onclick = () => doLogin(false);
+document.getElementById('loginNis').addEventListener('keypress', e => {
+  if (e.key === 'Enter') doLogin(false);
+});
+
+function showError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+/* ===== Logout ===== */
+document.getElementById('logoutBtn').onclick = () => {
+  if (confirm('Keluar dari portal?')) {
+    localStorage.removeItem('portal_siswa_session');
+    location.reload();
+  }
+};
+
+/* ===== Import JSON ===== */
+function handleImport() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json';
+  inp.onchange = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const data = JSON.parse(r.result);
+        if (data.students && Array.isArray(data.students)) {
+          portalStudents = data.students;
+        }
+        if (data.exams && Array.isArray(data.exams)) {
+          portalExams = data.exams;
+        } else if (Array.isArray(data)) {
+          // Mungkin array of exam objects
+          portalExams = data;
+        }
+        if (data.meta) {
+          if (data.meta.school) portalMeta.school = data.meta.school;
+          if (data.meta.semester) portalMeta.semester = data.meta.semester;
+          if (data.meta.teacher) portalMeta.teacher = data.meta.teacher;
+        }
+        // Save to localStorage so persisting
+        localStorage.setItem('ptg_students', JSON.stringify(portalStudents));
+        localStorage.setItem('ptg_exams', JSON.stringify(portalExams));
+        if (portalMeta.school) localStorage.setItem('ptg_reportSchool', portalMeta.school);
+        if (portalMeta.semester) localStorage.setItem('ptg_reportSemester', portalMeta.semester);
+        if (portalMeta.teacher) localStorage.setItem('ptg_teacherInput', portalMeta.teacher);
+        showToast('Data berhasil diimpor');
+        if (currentStudent) {
+          // Re-check matches
+          const matches = portalStudents.filter(s =>
+            s.name.toLowerCase().trim() === currentStudent.name.toLowerCase().trim() &&
+            (!currentStudent.nis || !s.nis || s.nis === currentStudent.nis));
+          currentStudent.scores = matches;
+          currentStudent.hasData = matches.length > 0;
+          renderAll();
+        }
+      } catch(err) {
+        showToast('Gagal membaca file');
+        console.error(err);
+      }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+document.getElementById('importBtn').onclick = handleImport;
+document.getElementById('importBtnLogin').onclick = handleImport;
+document.getElementById('menuImport').onclick = handleImport;
+
+/* ===== Tab Navigation ===== */
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.nav-btn').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-'+name));
+  if (name === 'home') renderHome();
+  if (name === 'nilai') renderNilai();
+  if (name === 'raport') renderRaport();
+  if (name === 'ujian') renderUjian();
+  if (name === 'latihan') renderLatihan();
+}
+document.querySelectorAll('.tab, .nav-btn').forEach(el => {
+  el.addEventListener('click', () => switchTab(el.dataset.tab));
+});
+document.querySelectorAll('.menu-card[data-tab]').forEach(el => {
+  el.addEventListener('click', () => switchTab(el.dataset.tab));
+});
+
+/* ===== Render functions ===== */
+function escapeHtml(s) {
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function gradeLabel(score) {
+  if (score >= 90) return 'A (Sangat Baik)';
+  if (score >= 80) return 'B (Baik)';
+  if (score >= 70) return 'C (Cukup)';
+  if (score >= 60) return 'D (Kurang)';
+  return 'E (Sangat Kurang)';
+}
+
+function scoreColorClass(score) {
+  if (score < 60) return 'low';
+  if (score < 75) return 'mid';
+  return 'high';
+}
+
+function descByScore(score) {
+  if (score >= 90) return 'Sangat Baik';
+  if (score >= 80) return 'Baik';
+  if (score >= 70) return 'Cukup';
+  if (score >= 60) return 'Kurang';
+  return 'Perlu Bimbingan';
+}
+
+function initials(name) {
+  return name.trim().split(/\s+/).slice(0,2).map(w => w[0]||'').join('').toUpperCase() || '?';
+}
+
+function renderAll() { renderHome(); }
+
+function renderHome() {
+  document.getElementById('welcomeName').textContent = currentStudent.name;
+  const meta = [
+    currentStudent.nis ? 'NIS: ' + currentStudent.nis : '',
+    currentStudent.scores.length ? 'Kelas: ' + (currentStudent.scores[0].assignment || '-') : ''
+  ].filter(Boolean).join(' · ') || 'Belum ada data - silakan import';
+  document.getElementById('welcomeMeta').textContent = meta;
+
+  const scores = currentStudent.scores.map(s => +s.score || 0);
+  document.getElementById('homeTotalNilai').textContent = currentStudent.scores.length;
+  document.getElementById('homeAvg').textContent = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(0) : '0';
+  document.getElementById('homeExams').textContent = portalExams.length;
+  document.getElementById('homeExamsAvail').textContent = portalExams.length + ' ujian tersedia';
+
+  // Update info text
+  const infoEl = document.getElementById('infoText');
+  if (currentStudent.scores.length === 0) {
+    infoEl.innerHTML = '⚠️ Data nilai Anda belum tersedia. Minta guru untuk <b>membagikan file backup</b> (dari aplikasi guru, tab "Bagikan Ujian" atau "Raport" → Backup), lalu klik <b>Impor Data</b> di atas.';
+  } else {
+    infoEl.innerHTML = '✅ Data nilai ditemukan: <b>' + currentStudent.scores.length + ' penilaian</b>. Anda bisa melihat detail nilai dan mencetak raport di tab di bawah.';
+  }
+}
+
+function renderNilai() {
+  const scores = currentStudent.scores.map(s => +s.score || 0);
+  document.getElementById('nilaiTotal').textContent = currentStudent.scores.length;
+  document.getElementById('nilaiAvg').textContent = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : '0';
+  document.getElementById('nilaiHigh').textContent = scores.length ? Math.max(...scores) : '0';
+  document.getElementById('nilaiLow').textContent = scores.length ? Math.min(...scores) : '0';
+
+  const list = document.getElementById('nilaiList');
+  if (currentStudent.scores.length === 0) {
+    list.innerHTML = '<div class="empty-state">Belum ada nilai.<br>Import data dari guru atau minta guru input nilai Anda.</div>';
+    return;
+  }
+  list.innerHTML = currentStudent.scores.map(s => `
+    <div class="score-card">
+      <div class="score-icon">${initials(s.assignment || 'N')}</div>
+      <div class="score-info">
+        <div class="score-name">${escapeHtml(s.assignment || 'Penilaian')}</div>
+        <div class="score-meta">${escapeHtml(gradeLabel(s.score))} · ${new Date(s.date).toLocaleDateString('id-ID')}</div>
+      </div>
+      <div class="score-val ${scoreColorClass(s.score)}">${s.score}</div>
+    </div>
+  `).join('');
+}
+
+function renderRaport() {
+  const card = document.getElementById('raportCard');
+  if (currentStudent.scores.length === 0) {
+    card.innerHTML = '<div class="empty-state">Belum ada data untuk raport.<br>Import data dari guru terlebih dahulu.</div>';
+    return;
+  }
+  const scores = currentStudent.scores.map(s => +s.score || 0);
+  const avg = (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(2);
+  const max = Math.max(...scores);
+  const min = Math.min(...scores);
+  const now = new Date();
+  const tgl = `${HARI_ID[now.getDay()]}, ${now.getDate()} ${BULAN_ID[now.getMonth()]} ${now.getFullYear()}`;
+
+  card.innerHTML = `
+    <div class="raport-header">
+      <div class="raport-school">${escapeHtml(portalMeta.school || 'Sekolah')}</div>
+      <div class="raport-title">RAPORT SISWA · ${escapeHtml(portalMeta.semester || 'Semester')}</div>
+    </div>
+
+    <div class="raport-id">
+      <div class="raport-avatar">${initials(currentStudent.name)}</div>
+      <div class="raport-id-info">
+        <div class="raport-id-name">${escapeHtml(currentStudent.name)}</div>
+        <div class="raport-id-meta">
+          ${currentStudent.nis ? 'NIS: ' + escapeHtml(currentStudent.nis) + '<br>' : ''}
+          Wali/Guru: ${escapeHtml(portalMeta.teacher || '-')}
+        </div>
+      </div>
+    </div>
+
+    <table class="raport-table">
+      <thead>
+        <tr>
+          <th style="width:30px">No</th>
+          <th>Mata Pelajaran / Penilaian</th>
+          <th style="width:60px" class="center">Nilai</th>
+          <th style="width:90px">Predikat</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${currentStudent.scores.map((s, i) => `
+          <tr>
+            <td class="center">${i+1}</td>
+            <td>${escapeHtml(s.assignment || 'Penilaian')}</td>
+            <td class="center" style="font-weight:700;color:${s.score<60?'#dc2626':s.score<75?'#ca8a04':'#16a34a'}">${s.score}</td>
+            <td style="font-size:11px">${gradeLabel(s.score)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+      <tfoot>
+        <tr style="background:#ede9fe;font-weight:700">
+          <td colspan="2" style="text-align:right">Rata-rata</td>
+          <td class="center" style="color:#7c3aed">${avg}</td>
+          <td style="font-size:11px">${gradeLabel(+avg)}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="raport-summary">
+      <b>Ringkasan:</b> Tertinggi <b>${max}</b> · Terendah <b>${min}</b> · Status: <b>${+avg >= 70 ? 'TUNTAS' : 'PERLU BIMBINGAN'}</b>
+    </div>
+
+    <button class="raport-print-btn" onclick="printRaport()">🖨️ Cetak / Simpan PDF</button>
+  `;
+}
+
+function printRaport() {
+  const card = document.getElementById('raportCard');
+  const w = window.open('', '_blank');
+  w.document.write(`
+    <html><head><title>Raport - ${escapeHtml(currentStudent.name)}</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:24px;color:#202124}
+      h1{color:#7c3aed;text-align:center;margin-bottom:4px}
+      table{width:100%;border-collapse:collapse;font-size:12px;margin-top:14px}
+      th,td{border:1px solid #999;padding:6px 8px;text-align:left}
+      th{background:#7c3aed;color:#fff}
+      .meta{font-size:13px;color:#5f6368;text-align:center;margin-bottom:20px}
+      .id-box{background:#ede9fe;padding:12px;border-radius:8px;margin-bottom:14px;display:flex;align-items:center;gap:12px}
+      .id-name{font-size:16px;font-weight:700}
+      .id-meta{font-size:12px;color:#5f6368;margin-top:2px}
+      .summary{margin-top:14px;padding:10px;background:#ede9fe;border-radius:6px;font-size:13px}
+      @media print { body { padding: 12px; } }
+    </style></head><body>
+    ${card.innerHTML.replace(/<button[^>]*>.*?<\/button>/g, '')}
+    <script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script>
+    </body></html>
+  `);
+  w.document.close();
+}
+
+function renderUjian() {
+  const list = document.getElementById('ujianList');
+  if (portalExams.length === 0) {
+    list.innerHTML = '<div class="empty-state">Belum ada ujian tersedia.<br>Import data dari guru untuk melihat ujian yang dibagikan.<br><br>Atau buka link ujian langsung yang dikirim guru via WhatsApp.</div>';
+    return;
+  }
+  // Check submitted answers from localStorage
+  let submitted = [];
+  try { submitted = JSON.parse(localStorage.getItem('submitted_answers') || '[]'); } catch(e) {}
+
+  list.innerHTML = portalExams.map((e, i) => {
+    // Check if current student already submitted this exam
+    const alreadySubmitted = submitted.find(a =>
+      a.examId === e.id &&
+      a.student?.name?.toLowerCase().trim() === currentStudent.name.toLowerCase().trim());
+    const isDone = !!alreadySubmitted;
+    return `
+      <div class="exam-item ${isDone ? 'done' : ''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="flex:1">
+            <div class="exam-item-title">${escapeHtml(e.title)}</div>
+            <div class="exam-item-meta">
+              ${escapeHtml(e.typeLabel || 'Ujian')} · ${escapeHtml(e.subject || '-')}<br>
+              Kelas: ${escapeHtml(e.class || '-')} · Durasi: ${e.duration} menit<br>
+              ${e.questions.length} soal (PG: ${e.questions.filter(q=>q.type==='mc').length}, Essay: ${e.questions.filter(q=>q.type==='essay').length})
+            </div>
+          </div>
+          <span class="exam-item-badge ${isDone ? 'badge-done' : 'badge-open'}">${isDone ? '✓ Selesai' : 'Buka'}</span>
+        </div>
+        ${isDone ? `
+          <div style="background:#dcfce7;padding:8px 10px;border-radius:8px;font-size:12px;color:#16a34a">
+            ✓ Sudah dikerjakan · Skor: <b>${alreadySubmitted.score}</b> · ${new Date(alreadySubmitted.submittedAt).toLocaleString('id-ID')}
+          </div>
+        ` : `
+          <button class="exam-start-btn" onclick="startExam(${i})">▶ Mulai Kerjakan</button>
+        `}
+      </div>
+    `;
+  }).join('');
+}
+
+/* ========================================================
+   LATIHAN / TUGAS MODULE
+   ======================================================== */
+
+let currentTugasFile = null; // { name, type, size, dataUrl, ext }
+let currentAnswerFile = null; // { name, type, size, dataUrl }
+
+/* Render list of submitted tasks */
+function renderLatihan() {
+  renderTugasSubmitted();
+}
+
+function renderTugasSubmitted() {
+  const list = document.getElementById('tugasSubmittedList');
+  let submitted = [];
+  try {
+    submitted = JSON.parse(localStorage.getItem('ptg_submitted_tugas') || '[]');
+  } catch(e) {}
+
+  // Filter to current student only
+  const mine = submitted.filter(t =>
+    t.student && currentStudent &&
+    t.student.name?.toLowerCase().trim() === currentStudent.name.toLowerCase().trim() &&
+    (!currentStudent.nis || !t.student.nis || t.student.nis === currentStudent.nis));
+
+  if (mine.length === 0) {
+    list.innerHTML = '<div class="empty-state">Belum ada tugas yang Anda kumpulkan.<br>Buka file tugas dari guru di atas, kerjakan, lalu kumpulkan.</div>';
+    return;
+  }
+  list.innerHTML = mine.slice().reverse().map((t, idx) => `
+    <div class="exam-item ${t.status === 'graded' ? 'done' : ''}" style="border-left-color:${t.status === 'graded' ? '#16a34a' : '#7c3aed'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1">
+          <div class="exam-item-title">${escapeHtml(t.title || 'Tugas')}</div>
+          <div class="exam-item-meta">
+            Dikumpulkan: ${new Date(t.submittedAt).toLocaleString('id-ID')}<br>
+            ${t.fileName ? '📎 File tugas: ' + escapeHtml(t.fileName) + '<br>' : ''}
+            ${t.answerFileName ? '📎 File jawaban: ' + escapeHtml(t.answerFileName) + '<br>' : ''}
+            ${t.answer ? '📝 Jawaban teks: ' + escapeHtml(t.answer.substring(0, 60)) + (t.answer.length > 60 ? '...' : '') + '<br>' : ''}
+            Status: <b style="color:${t.status === 'graded' ? '#16a34a' : '#ca8a04'}">${t.status === 'graded' ? '✓ Dinilai' : '⏳ Menunggu Penilaian'}</b>
+            ${t.status === 'graded' && t.grade ? ' · Nilai: <b>' + t.grade + '</b>' : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('refreshTugasBtn').onclick = renderTugasSubmitted;
+
+/* ===== File Upload Handler ===== */
+/* Note: tombol pakai <label for=...>, jadi klik langsung trigger input file tanpa JS */
+const tugasFileInputEl = document.getElementById('tugasFileInput');
+const tugasUploadLabelEl = document.getElementById('tugasFileInput')?.nextElementSibling;
+if (tugasFileInputEl) {
+  // Workaround untuk browser yang tidak auto-trigger lewat label
+  if (tugasUploadLabelEl) {
+    tugasUploadLabelEl.addEventListener('click', (e) => {
+      // Beri waktu sedikit supaya event natural label click sempat dijalankan
+      setTimeout(() => {
+        if (!tugasFileInputEl.files || tugasFileInputEl.files.length === 0) {
+          // Jika tidak ter-trigger otomatis, paksa klik
+          e.preventDefault();
+          tugasFileInputEl.click();
+        }
+      }, 100);
+    });
+  }
+  tugasFileInputEl.addEventListener('change', async (e) => {
+    console.log('File dipilih:', e.target.files);
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { showToast('Maksimal 5MB'); return; }
+
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    const info = document.getElementById('tugasFileInfo');
+    if (info) {
+      info.style.display = '';
+      info.innerHTML = `
+        <div style="background:#ede9fe;padding:8px 12px;border-radius:8px;font-size:12px">
+          <b>📄 ${escapeHtml(file.name)}</b><br>
+          Tipe: ${ext.toUpperCase()} · Ukuran: ${(file.size/1024).toFixed(1)} KB
+        </div>
+      `;
+    }
+
+    currentTugasFile = { name: file.name, type: file.type, size: file.size, ext };
+    await previewFile(file);
+    const ansCard = document.getElementById('tugasAnswerCard');
+    if (ansCard) {
+      ansCard.style.display = '';
+      ansCard.scrollIntoView({behavior:'smooth'});
+    }
+  });
+}
+
+const closePreviewBtnEl = document.getElementById('closePreviewBtn');
+if (closePreviewBtnEl) {
+  closePreviewBtnEl.onclick = () => {
+    const card = document.getElementById('tugasPreviewCard');
+    if (card) card.style.display = 'none';
+  };
+}
+
+/* ===== Preview File (PDF native, DOCX via Mammoth, XLSX via SheetJS, PPTX, TXT, image, fallback) ===== */
+async function previewFile(file) {
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const preview = document.getElementById('tugasPreview');
+  const card = document.getElementById('tugasPreviewCard');
+  if (!preview || !card) return;
+  card.style.display = '';
+  preview.innerHTML = '<div style="padding:20px;text-align:center;color:#5f6368;font-size:13px">⏳ Memuat preview...</div>';
+
+  console.log('Preview file:', file.name, 'ext:', ext, 'type:', file.type, 'size:', file.size);
+
+  try {
+    // PDF — native browser support via iframe
+    if (ext === 'pdf' || file.type === 'application/pdf') {
+      const url = URL.createObjectURL(file);
+      preview.innerHTML = `<iframe src="${url}" style="width:100%;height:600px;border:none" allowfullscreen></iframe>`;
+    }
+    // DOCX (Word modern)
+    else if (ext === 'docx' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      preview.innerHTML = '<div style="padding:20px;text-align:center;color:#5f6368;font-size:13px">⏳ Memuat pemroses Word...</div>';
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await window.mammoth.convertToHtml({ arrayBuffer });
+      preview.innerHTML = `<div style="padding:14px;font-size:14px;line-height:1.6;max-height:600px;overflow-y:auto">${result.value || '<i>(File kosong)</i>'}</div>`;
+    }
+    // XLSX / XLS (Excel)
+    else if (ext === 'xlsx' || ext === 'xls' ||
+             file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+             file.type === 'application/vnd.ms-excel') {
+      preview.innerHTML = '<div style="padding:20px;text-align:center;color:#5f6368;font-size:13px">⏳ Memuat pemroses Excel...</div>';
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      let html = '';
+      workbook.SheetNames.forEach((sheetName, idx) => {
+        const sheet = workbook.Sheets[sheetName];
+        const htmlTable = XLSX.utils.sheet_to_html(sheet, { id: 'sheet-' + idx });
+        html += `<div style="margin-bottom:12px"><div style="background:#7c3aed;color:#fff;padding:6px 10px;border-radius:6px 6px 0 0;font-size:12px;font-weight:700">📊 ${escapeHtml(sheetName)}</div><div style="overflow-x:auto;border:1px solid #e8eaed;border-top:none;border-radius:0 0 6px 6px">${htmlTable}</div></div>`;
+      });
+      preview.innerHTML = `<div style="padding:14px;max-height:600px;overflow-y:auto">${html || '<i>(File kosong)</i>'}</div>`;
+      preview.querySelectorAll('table').forEach(t => {
+        t.style.borderCollapse = 'collapse'; t.style.width = '100%';
+        t.querySelectorAll('td, th').forEach(c => {
+          c.style.border = '1px solid #e8eaed'; c.style.padding = '4px 8px'; c.style.fontSize = '12px';
+        });
+      });
+    }
+    // PPTX (PowerPoint) — pakai JSZip untuk ekstrak slide
+    else if (ext === 'pptx' || file.type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
+      preview.innerHTML = '<div style="padding:20px;text-align:center;color:#5f6368;font-size:13px">⏳ Memuat pemroses PowerPoint...</div>';
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+      const arrayBuffer = await file.arrayBuffer();
+      const zip = await JSZip.loadAsync(arrayBuffer);
+      const slideFiles = Object.keys(zip.files).filter(n => /ppt\/slides\/slide\d+\.xml$/.test(n)).sort();
+      let html = '';
+      for (let i = 0; i < slideFiles.length; i++) {
+        const content = await zip.files[slideFiles[i]].async('string');
+        // Extract text from <a:t>...</a:t>
+        const texts = content.match(/<a:t>([^<]*)<\/a:t>/g) || [];
+        const text = texts.map(t => t.replace(/<\/?a:t>/g, '')).join(' ');
+        html += `<div style="background:#fff;border:1px solid #e8eaed;border-radius:8px;padding:14px;margin-bottom:10px"><div style="background:#7c3aed;color:#fff;padding:4px 10px;border-radius:6px;display:inline-block;font-size:11px;font-weight:700;margin-bottom:8px">Slide ${i+1}</div><div style="font-size:14px;line-height:1.5;white-space:pre-wrap">${escapeHtml(text) || '<i>(kosong)</i>'}</div></div>`;
+      }
+      preview.innerHTML = `<div style="padding:14px;max-height:600px;overflow-y:auto">${html || '<i>(File kosong)</i>'}</div>`;
+    }
+    // Image (foto, screenshot, scan jawaban)
+    else if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      const imgHtml = await new Promise((resolve) => {
+        reader.onload = () => resolve(`<div style="padding:14px;text-align:center"><img src="${reader.result}" style="max-width:100%;max-height:600px;border-radius:8px;border:1px solid #e8eaed"></div>`);
+        reader.readAsDataURL(file);
+      });
+      preview.innerHTML = imgHtml;
+    }
+    // TXT / CSV / kode sumber — tampilkan sebagai teks
+    else if (ext === 'txt' || ext === 'csv' || ext === 'md' || ext === 'json' || ext === 'js' || ext === 'html' || ext === 'css' ||
+             file.type.startsWith('text/') || file.type === 'application/json') {
+      const text = await file.text();
+      preview.innerHTML = `<pre style="padding:14px;font-size:13px;line-height:1.5;max-height:600px;overflow:auto;white-space:pre-wrap;word-break:break-word;background:#f8f9fa;border-radius:6px">${escapeHtml(text)}</pre>`;
+    }
+    // DOC lama (Word 97-2003) — coba ekstrak teks
+    else if (ext === 'doc' || file.type === 'application/msword') {
+      preview.innerHTML = '<div style="padding:20px;text-align:center;color:#ca8a04;font-size:13px">⏳ Membaca file .doc lama...</div>';
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        // Coba pakai mammoth dulu (kadang support .doc)
+        try {
+          await loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
+          const result = await window.mammoth.convertToHtml({ arrayBuffer });
+          if (result.value && result.value.length > 50) {
+            preview.innerHTML = `<div style="padding:14px;font-size:14px;line-height:1.6;max-height:600px;overflow-y:auto">${result.value}</div>`;
+            return;
+          }
+        } catch(e) {}
+        // Fallback: ekstrak teks mentah
+        let text = '';
+        for (let i = 0; i < bytes.length; i++) {
+          const c = bytes[i];
+          if (c >= 32 && c <= 126 || c === 10 || c === 13 || c === 9) text += String.fromCharCode(c);
+        }
+        // Filter kata-kata acak (panjang > 2 char)
+        const cleanText = text.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (cleanText.length > 100) {
+          preview.innerHTML = `<pre style="padding:14px;font-size:13px;line-height:1.5;max-height:600px;overflow:auto;white-space:pre-wrap;word-break:break-word;background:#f8f9fa;border-radius:6px">${escapeHtml(cleanText.substring(0, 50000))}</pre><div style="padding:8px;font-size:11px;color:#ca8a04;text-align:center">⚠️ Format .doc lama — tampilan mungkin tidak sempurna. Disarankan konversi ke .docx atau .pdf.</div>`;
+        } else {
+          preview.innerHTML = '<div style="padding:14px;text-align:center"><i>Tidak dapat mengekstrak teks dari file .doc ini. Silakan konversi ke .docx atau .pdf.</i></div>';
+        }
+      } catch(err) {
+        preview.innerHTML = '<div style="padding:14px"><i>Gagal membaca file .doc. Coba .docx atau .pdf.</i></div>';
+      }
+    }
+    // Audio / Video — pakai HTML5 player
+    else if (file.type.startsWith('audio/') || file.type.startsWith('video/')) {
+      const url = URL.createObjectURL(file);
+      const tag = file.type.startsWith('audio/') ? 'audio' : 'video';
+      preview.innerHTML = `<${tag} src="${url}" controls style="width:100%;max-height:600px"></${tag}>`;
+    }
+    // Fallback: coba tampilkan sebagai teks, kalau gagal tampilkan info
+    else {
+      try {
+        const text = await file.text();
+        if (text && text.length > 0 && /^[\x20-\x7E\s]+$/.test(text.substring(0, 100))) {
+          preview.innerHTML = `<pre style="padding:14px;font-size:13px;max-height:600px;overflow:auto;white-space:pre-wrap;background:#f8f9fa;border-radius:6px">${escapeHtml(text.substring(0, 50000))}</pre>`;
+        } else {
+          throw new Error('binary');
+        }
+      } catch(err) {
+        // Last resort: tampilkan sebagai downloadable link dengan info file
+        const url = URL.createObjectURL(file);
+        preview.innerHTML = `<div style="padding:30px;text-align:center">
+          <div style="font-size:48px;margin-bottom:10px">📄</div>
+          <div style="font-weight:700;margin-bottom:6px">${escapeHtml(file.name)}</div>
+          <div style="font-size:12px;color:#5f6368;margin-bottom:14px">Format: ${ext.toUpperCase()} · Ukuran: ${(file.size/1024).toFixed(1)} KB</div>
+          <div style="background:#fef7e0;padding:10px;border-radius:8px;font-size:12px;color:#ca8a04;margin-bottom:14px">
+            ⚠️ Format <b>.${ext}</b> tidak bisa ditampilkan langsung di browser. Klik tombol di bawah untuk mengunduh & membuka dengan aplikasi.
+          </div>
+          <a href="${url}" download="${escapeHtml(file.name)}" style="background:#7c3aed;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">⬇ Unduh File</a>
+        </div>`;
+      }
+    }
+  } catch(err) {
+    console.error('Preview error:', err);
+    preview.innerHTML = `<div style="padding:20px;text-align:center;color:#dc2626;font-size:13px">❌ Gagal membaca file: ${escapeHtml(err.message)}<br><br>Coba file lain atau pastikan file tidak corrupt.</div>`;
+  }
+}
+
+/* Load external script dynamically */
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector('script[src="' + src + '"]')) {
+      resolve(); return;
+    }
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Gagal load: ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+/* ===== Answer file attachment ===== */
+/* Tombol pakai <label for="tugasAnswerFile">, jadi tidak perlu JS untuk trigger input */
+const tugasAnswerFileEl = document.getElementById('tugasAnswerFile');
+if (tugasAnswerFileEl) {
+  tugasAnswerFileEl.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { showToast('Maksimal 5MB untuk file jawaban'); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      currentAnswerFile = {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        dataUrl: reader.result
+      };
+      const lbl = document.getElementById('answerFileName');
+      if (lbl) lbl.textContent = '📎 ' + file.name + ' (' + (file.size/1024).toFixed(1) + ' KB)';
+      showToast('File jawaban dilampirkan');
+    };
+    reader.onerror = () => showToast('Gagal membaca file');
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ===== Submit Task to Guru ===== */
+const submitTugasBtnEl = document.getElementById('submitTugasBtn');
+if (submitTugasBtnEl) {
+  submitTugasBtnEl.onclick = () => {
+    console.log('Submit clicked, currentStudent:', currentStudent);
+    if (!currentStudent || !currentStudent.name) {
+      showToast('Silakan login dulu'); return;
+    }
+    const titleEl = document.getElementById('tugasTitle');
+    const answerEl = document.getElementById('tugasAnswer');
+    const title = titleEl ? titleEl.value.trim() : '';
+    const answer = answerEl ? answerEl.value.trim() : '';
+
+    if (!title) { showToast('Isi judul tugas dulu'); return; }
+    if (!answer && !currentAnswerFile) {
+      showToast('Tulis jawaban atau lampirkan file jawaban'); return;
+    }
+
+    const tugas = {
+      id: 'tugas_' + Date.now(),
+      title,
+      answer,
+      answerFileName: currentAnswerFile?.name || '',
+      answerFileData: currentAnswerFile?.dataUrl || '',
+      answerFileType: currentAnswerFile?.type || '',
+      fileName: currentTugasFile?.name || '',
+      fileType: currentTugasFile?.ext || '',
+      student: {
+        name: currentStudent.name,
+        nis: currentStudent.nis || '',
+        class: currentStudent.scores[0]?.assignment || ''
+      },
+      submittedAt: new Date().toISOString(),
+      status: 'pending'
+    };
+
+    console.log('Tugas akan disimpan:', tugas);
+
+    let submitted = [];
+    try {
+      submitted = JSON.parse(localStorage.getItem('ptg_submitted_tugas') || '[]');
+    } catch(e) { console.warn('Failed to parse existing:', e); }
+    submitted.push(tugas);
+    try {
+      localStorage.setItem('ptg_submitted_tugas', JSON.stringify(submitted));
+      showToast('✅ Tugas dikumpulkan! Guru akan menerimanya.');
+      // Reset form
+      if (titleEl) titleEl.value = '';
+      if (answerEl) answerEl.value = '';
+      const ansLbl = document.getElementById('answerFileName');
+      if (ansLbl) ansLbl.textContent = '';
+      const infoEl = document.getElementById('tugasFileInfo');
+      if (infoEl) infoEl.style.display = 'none';
+      const prevEl = document.getElementById('tugasPreviewCard');
+      if (prevEl) prevEl.style.display = 'none';
+      const ansCardEl = document.getElementById('tugasAnswerCard');
+      if (ansCardEl) ansCardEl.style.display = 'none';
+      currentTugasFile = null;
+      currentAnswerFile = null;
+      if (tugasFileInputEl) tugasFileInputEl.value = '';
+      if (tugasAnswerFileEl) tugasAnswerFileEl.value = '';
+      renderTugasSubmitted();
+    } catch(err) {
+      console.error('Save error:', err);
+      showToast('❌ Gagal menyimpan: ' + err.message);
+    }
+  };
+}
+
+function startExam(idx) {
+  const exam = portalExams[idx];
+  if (!exam) return;
+  if (!confirm(`Mulai ujian "${exam.title}"?\nDurasi: ${exam.duration} menit.\nPastikan koneksi internet stabil dan jangan tutup tab selama ujian berjalan.`)) return;
+
+  // Generate the exam viewer URL hash
+  const json = JSON.stringify(exam);
+  let b64;
+  try { b64 = btoa(unescape(encodeURIComponent(json))); } catch(e) { b64 = btoa(json); }
+  const baseUrl = location.href.split('#')[0];
+  const examUrl = baseUrl + '#exam=' + b64;
+  // Open in same tab so student gets the exam experience
+  location.href = examUrl;
+  // Force reload to trigger exam viewer mode
+  setTimeout(() => location.reload(), 100);
+}
+
+/* ===== Exam Viewer Mode (when URL has #exam=...) ===== */
+function checkExamViewerMode() {
+  const hash = location.hash;
+  if (!hash.startsWith('#exam=')) return;
+  const b64 = hash.substring(6);
+  let examData;
+  try {
+    const json = decodeURIComponent(escape(atob(b64)));
+    examData = JSON.parse(json);
+  } catch(e) {
+    document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#dc2626;font-size:16px">❌ Link ujian tidak valid atau rusak.</div>';
+    return;
+  }
+  // Render exam viewer — use document.write so embedded <script> tags execute
+  document.title = examData.title || 'Ujian';
+  document.open();
+  document.write('<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>' + escapeHtml(examData.title || 'Ujian') + '</title><style>html,body{margin:0;padding:0;background:#ede9fe;min-height:100%;overflow-y:auto;overflow-x:hidden} body{padding:14px 14px 80px}</style></head><body>' + generateStandaloneExamHTML(examData) + '</body></html>');
+  document.close();
+}
+
+function generateStandaloneExamHTML(exam) {
+  return `
+<div style="font-family:'Segoe UI',system-ui,sans-serif;color:#202124;max-width:800px;margin:0 auto">
+  <div style="background:#7c3aed;color:#fff;padding:16px;border-radius:12px;margin-bottom:14px">
+    <div style="font-size:20px;font-weight:700">${escapeHtml(exam.title)}</div>
+    <div style="font-size:13px;opacity:.9;margin-top:6px">
+      ${escapeHtml(exam.typeLabel || 'Ujian')} · ${escapeHtml(exam.subject||'')}${exam.class ? ' · ' + escapeHtml(exam.class) : ''}<br>
+      Guru: ${escapeHtml(exam.teacher||'-')} · ${escapeHtml(exam.school||'')}<br>
+      Durasi: ${exam.duration} menit
+    </div>
+  </div>
+
+  <div id="identForm" style="background:#fff;padding:14px;border-radius:10px;margin-bottom:12px">
+    <h3 style="margin-bottom:10px;font-size:15px">Identitas Siswa</h3>
+    <input type="text" id="studentName" placeholder="Nama Lengkap" value="${currentStudent ? escapeHtml(currentStudent.name) : ''}" style="width:100%;padding:10px;border:1px solid #dadce0;border-radius:8px;font-size:14px;margin-bottom:8px;outline:none">
+    <input type="text" id="studentNis" placeholder="NIS / NISN (opsional)" value="${currentStudent ? escapeHtml(currentStudent.nis) : ''}" style="width:100%;padding:10px;border:1px solid #dadce0;border-radius:8px;font-size:14px;margin-bottom:8px;outline:none">
+    <input type="text" id="studentClass" placeholder="Kelas (cth: VI-A)" style="width:100%;padding:10px;border:1px solid #dadce0;border-radius:8px;font-size:14px;margin-bottom:8px;outline:none">
+    <button onclick="startExamTimer()" style="width:100%;background:#7c3aed;color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Mulai Mengerjakan →</button>
+  </div>
+
+  <div id="examArea" style="display:none">
+    <div id="timer" style="background:#fff;color:#7c3aed;padding:10px 16px;border-radius:10px;margin-bottom:12px;font-weight:700;font-size:18px;text-align:center;position:sticky;top:8px;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.1)">⏱ 00:00</div>
+    <div id="questionsArea"></div>
+    <div style="position:sticky;bottom:8px;background:#fff;padding:10px;border-radius:10px;box-shadow:0 -2px 8px rgba(0,0,0,.1);display:flex;gap:8px">
+      <button onclick="saveDraft()" style="flex:1;background:#7c3aed;color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">💾 Simpan Draft</button>
+      <button onclick="submitExam()" style="flex:1;background:#16a34a;color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">✅ Kumpulkan</button>
+    </div>
+  </div>
+
+  <div id="resultArea" style="display:none"></div>
+</div>
+
+<script>
+const EXAM_DATA = ${JSON.stringify(exam)};
+let answers = {};
+let timerInterval = null;
+let timeLeft = ${exam.duration} * 60;
+
+function startExamTimer() {
+  const name = document.getElementById('studentName').value.trim();
+  if (!name) { alert('Isi nama dulu'); return; }
+  document.getElementById('identForm').style.display = 'none';
+  document.getElementById('examArea').style.display = 'block';
+  renderQuestions();
+  startTimer();
+}
+
+function renderQuestions() {
+  const area = document.getElementById('questionsArea');
+  area.innerHTML = EXAM_DATA.questions.map((q, i) => {
+    const imgHtml = q.image ? '<div style="margin:8px 0;text-align:center"><img src="' + q.image + '" alt="Gambar soal" style="max-width:100%;max-height:350px;border-radius:8px;border:1px solid #e8eaed;cursor:pointer" onclick="openFull(this.src)"></div>' : '';
+    let body = '';
+    if (q.type === 'mc') {
+      body = '<div style="display:flex;flex-direction:column;gap:8px">' +
+        q.options.map((opt, oi) => '<label style="display:flex;align-items:center;gap:10px;padding:10px;border:2px solid #e8eaed;border-radius:8px;cursor:pointer"><input type="radio" name="q' + i + '" value="' + oi + '" onchange="answers[' + i + '] = ' + oi + '" style="width:20px;height:20px;accent-color:#7c3aed"><span style="font-size:14px"><b>' + String.fromCharCode(65+oi) + '.</b> ' + escapeHtmlSafe(opt) + '</span></label>').join('') +
+        '</div>';
+    } else {
+      body = '<textarea placeholder="Tulis jawaban Anda di sini..." oninput="answers[' + i + '] = this.value" style="width:100%;min-height:100px;border:1px solid #dadce0;border-radius:8px;padding:10px;font-size:14px;font-family:inherit;outline:none"></textarea>';
+    }
+    return '<div style="background:#fff;padding:14px;border-radius:10px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)">' +
+      '<span style="background:#7c3aed;color:#fff;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:700;display:inline-block">Soal ' + (i+1) + ' (' + q.points + ' poin)</span>' +
+      '<div style="font-size:15px;margin:10px 0;line-height:1.5;white-space:pre-wrap">' + escapeHtmlSafe(q.text) + '</div>' +
+      imgHtml + body + '</div>';
+  }).join('');
+}
+
+function escapeHtmlSafe(s) {
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function openFull(src) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;cursor:zoom-out';
+  overlay.innerHTML = '<img src="' + src + '" style="max-width:100%;max-height:100%;border-radius:8px">';
+  overlay.onclick = () => overlay.remove();
+  document.body.appendChild(overlay);
+}
+
+function startTimer() {
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      alert('Waktu habis! Jawaban otomatis dikumpulkan.');
+      submitExam(true);
+      return;
+    }
+    const m = Math.floor(timeLeft / 60);
+    const s = timeLeft % 60;
+    document.getElementById('timer').textContent = '⏱ ' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    if (timeLeft < 60) document.getElementById('timer').style.color = '#dc2626';
+  }, 1000);
+}
+
+function saveDraft() {
+  const data = {
+    exam: EXAM_DATA,
+    student: {
+      name: document.getElementById('studentName').value,
+      nis: document.getElementById('studentNis').value,
+      class: document.getElementById('studentClass').value
+    },
+    answers,
+    savedAt: new Date().toISOString()
+  };
+  try {
+    localStorage.setItem('draft_' + EXAM_DATA.id, JSON.stringify(data));
+    alert('Draft tersimpan. Anda bisa lanjut nanti di perangkat ini.');
+  } catch(e) {
+    alert('Gagal menyimpan draft: ' + e.message);
+  }
+}
+
+function submitExam(auto) {
+  if (!auto) {
+    const unanswered = EXAM_DATA.questions.filter((q, i) => answers[i] === undefined || answers[i] === '').length;
+    if (unanswered > 0) {
+      if (!confirm('Masih ada ' + unanswered + ' soal belum dijawab. Yakin kumpulkan?')) return;
+    }
+  }
+  clearInterval(timerInterval);
+
+  let totalPoints = 0, earnedPoints = 0;
+  EXAM_DATA.questions.forEach((q, i) => {
+    totalPoints += q.points || 0;
+    if (q.type === 'mc' && answers[i] !== undefined && answers[i] === q.correct) {
+      earnedPoints += q.points || 0;
+    }
+  });
+  const score = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+
+  const resultArea = document.getElementById('resultArea');
+  document.getElementById('examArea').style.display = 'none';
+  resultArea.style.display = 'block';
+  resultArea.innerHTML = '<div style="background:#fff;padding:16px;border-radius:12px;text-align:center;margin-top:14px">' +
+    '<h2 style="font-size:18px">✅ Jawaban Terkumpul!</h2>' +
+    '<div style="font-size:14px;color:#5f6368;margin:8px 0">' + escapeHtmlSafe(document.getElementById('studentName').value) + '</div>' +
+    '<div style="font-size:48px;font-weight:700;color:#16a34a">' + score + '</div>' +
+    '<div style="font-size:14px;color:#5f6368">dari 100 (Pilihan Ganda)</div>' +
+    '<div style="margin-top:12px;font-size:13px;color:#5f6368">Jawaban benar: ' + earnedPoints + '/' + totalPoints + ' poin</div>' +
+    (EXAM_DATA.questions.some(q => q.type === 'essay') ? '<div style="margin-top:8px;font-size:12px;color:#ca8a04">⚠️ Essay perlu dinilai manual oleh Guru</div>' : '') +
+    '</div>' +
+    '<div style="background:#fff;padding:14px;border-radius:10px;margin-top:12px">' +
+    '<h3 style="margin-bottom:8px;font-size:14px">📥 Kirim Jawaban ke Guru</h3>' +
+    '<p style="font-size:12px;color:#5f6368;margin-bottom:8px">Salin teks di bawah, kirim via WhatsApp/Email ke Guru:</p>' +
+    '<textarea id="answerExport" style="width:100%;min-height:300px;font-size:11px;font-family:monospace;border:1px solid #dadce0;border-radius:6px;padding:8px;resize:vertical;white-space:pre-wrap;word-break:break-word" readonly></textarea>' +
+    '<div style="display:flex;gap:8px;margin-top:8px">' +
+      '<button onclick="copyAnswer()" style="flex:1;background:#7c3aed;color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">⧉ Salin</button>' +
+      '<a id="waLink" target="_blank" style="flex:1;text-decoration:none;display:flex;align-items:center;justify-content:center;background:#25d366;color:#fff;padding:12px;border-radius:8px;font-size:14px;font-weight:700">💬 WhatsApp</a>' +
+      '<button onclick="window.print()" style="flex:1;background:#5f6368;color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨️ Cetak</button>' +
+      '<button onclick="location.href=location.pathname" style="flex:1;background:#7c3aed;color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🏠 Portal</button>' +
+    '</div></div>';
+
+  const student = {
+    name: document.getElementById('studentName').value,
+    nis: document.getElementById('studentNis').value,
+    class: document.getElementById('studentClass').value
+  };
+  const answerText = buildAnswerText(EXAM_DATA, student, answers, score);
+  const answerExportEl = document.getElementById('answerExport');
+  answerExportEl.value = answerText;
+  // Auto-grow textarea supaya semua konten terlihat (tidak terpotong)
+  answerExportEl.style.height = 'auto';
+  answerExportEl.style.height = Math.max(300, answerExportEl.scrollHeight + 20) + 'px';
+  document.getElementById('waLink').href = 'https://wa.me/?text=' + encodeURIComponent(answerText);
+
+  try {
+    const submitted = JSON.parse(localStorage.getItem('submitted_answers') || '[]');
+    submitted.push({
+      examId: EXAM_DATA.id,
+      examTitle: EXAM_DATA.title,
+      student,
+      answers,
+      score,
+      submittedAt: new Date().toISOString()
+    });
+    localStorage.setItem('submitted_answers', JSON.stringify(submitted));
+  } catch(e) {}
+}
+
+function buildAnswerText(exam, student, answers, score) {
+  let text = '═══ JAWABAN UJIAN ═══\\n';
+  text += 'Judul: ' + exam.title + '\\n';
+  text += 'Nama: ' + student.name + '\\n';
+  if (student.nis) text += 'NIS: ' + student.nis + '\\n';
+  if (student.class) text += 'Kelas: ' + student.class + '\\n';
+  text += 'Mapel: ' + (exam.subject||'-') + '\\n';
+  text += 'Skor PG: ' + score + '/100\\n';
+  text += 'Waktu: ' + new Date().toLocaleString('id-ID') + '\\n';
+  text += '═══════════════════\\n\\n';
+  exam.questions.forEach((q, i) => {
+    text += 'Soal ' + (i+1) + ': ' + (q.text || '(kosong)') + '\\n';
+    if (q.type === 'mc') {
+      const ai = answers[i];
+      text += 'Jawaban: ' + (ai !== undefined ? String.fromCharCode(65+ai) + '. ' + (q.options[ai]||'') : '(kosong)') + '\\n';
+      text += 'Kunci: ' + String.fromCharCode(65+q.correct) + '. ' + (q.options[q.correct]||'') + '\\n';
+    } else {
+      text += 'Jawaban: ' + (answers[i] || '(kosong)') + '\\n';
+    }
+    text += '\\n';
+  });
+  return text;
+}
+
+function copyAnswer() {
+  const ta = document.getElementById('answerExport');
+  ta.select();
+  document.execCommand('copy');
+  alert('Jawaban disalin! Tempel ke WhatsApp/Email untuk dikirim ke Guru.');
+}
+<\/script>
+`;
+}
+
+/* ===== Init ===== */
+checkExamViewerMode();
+
+/* Toast helper */
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+document.addEventListener('contextmenu', e => e.preventDefault());
+</script>
+</body>
+</html>
